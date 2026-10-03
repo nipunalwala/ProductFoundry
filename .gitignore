@@ -1,0 +1,29 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Model and data caches
+.cache/
+models/
+*.safetensors
+
+# Node
+node_modules/
+.next/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

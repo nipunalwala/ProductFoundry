@@ -20,7 +20,7 @@ Git:
 Build and test (from `backend/`):
 
 ```
-uv run ruff check . && uv run pytest
+py -m uv run ruff check . && py -m uv run pytest
 ```
 
 API keys live in `.env` (never committed). Never print or log them. All LLM

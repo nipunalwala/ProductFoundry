@@ -28,7 +28,7 @@ ends with a gate. The next milestone starts only after the gate passes.
 4. **Verify before reporting.** A phase is done only when its acceptance checks
    pass, including, from `backend/`:
    ```
-   uv run ruff check . && uv run pytest
+   py -m uv run ruff check . && py -m uv run pytest
    ```
    If a check cannot be run (for example it needs a key the owner has not
    created), say so explicitly.
@@ -61,7 +61,8 @@ ends with a gate. The next milestone starts only after the gate passes.
 
 ## Conventions
 
-- Python 3.11 or newer, managed with `uv`. One package, `productfoundry`, under
+- Python 3.11 or newer, managed with `uv`, run as `py -m uv` on the
+  development machine. One package, `productfoundry`, under
   `backend/src/`. Dependencies and tool settings live in
   `backend/pyproject.toml` only.
 - pydantic v2 for every schema; SQLAlchemy 2 and Alembic for storage; pytest;
@@ -78,6 +79,9 @@ ends with a gate. The next milestone starts only after the gate passes.
   per task, with a version in the filename.
 - Windows is the development machine. Anything that does not run natively on
   Windows (the queue worker) runs in Docker.
+- The Docker database listens on `127.0.0.1:5433` (`POSTGRES_PORT`). Port 5432
+  belongs to a native PostgreSQL on the development machine and is not used by
+  this project.
 
 ## Decisions needed from the owner
 
@@ -98,7 +102,7 @@ where the table says so.
 
 | Phase | Title | Status |
 |---|---|---|
-| 0 | Toolchain and first green build | Not started |
+| 0 | Toolchain and first green build | Done 2026-10-04. Lint and 1 test pass; `productfoundry --version` prints 0.1.0; the database container starts healthy and `CREATE EXTENSION vector` succeeds (pgvector 0.8.7 on PostgreSQL 17). uv is run as `py -m uv` because pip installed it outside PATH. The database is on host port 5433 because a native PostgreSQL already uses 5432 on this machine |
 | 1 | Schemas and the run state machine | Not started |
 | 2 | Storage | Not started |
 | 3 | LLM gateway | Not started |
@@ -156,7 +160,7 @@ machine: Python 3.11 (`py`), Node 20, Docker and git. `uv` is not installed.
 - `productfoundry --version` works through `uv run`.
 
 **Acceptance.**
-- `uv run ruff check . && uv run pytest` passes from `backend/`.
+- `py -m uv run ruff check . && py -m uv run pytest` passes from `backend/`.
 - `docker compose up -d db` starts and `CREATE EXTENSION vector` succeeds.
 - `.env` is ignored by git.
 
