@@ -1,0 +1,30 @@
+{
+  "_note": "Written by hand: acceptance criteria for the six tasks of fixtures/llm/task_breakdown.json, by the id the stage gives each task. The test answers each epic's call with the criteria of the tasks it was sent.",
+  "criteria": {
+    "task_001": [
+      {"kind": "happy_path", "given": "an empty database", "when": "a group with one expense of 300 is saved", "then": "reading the group back returns the same expense of 300"},
+      {"kind": "edge_case", "given": "a group with no expenses", "when": "the group is read", "then": "it is returned with an empty expense list"}
+    ],
+    "task_002": [
+      {"kind": "happy_path", "given": "a payment the provider reports as failed after the debit", "when": "the failure is received", "then": "a refund is started and the payment shows as refunded"},
+      {"kind": "failure_state", "given": "a failed payment whose refund request is rejected by the provider", "when": "the rejection is received", "then": "the payment shows as refund pending and the refund is tried again within an hour"}
+    ],
+    "task_003": [
+      {"kind": "happy_path", "given": "a payment that the provider confirms", "when": "the confirmation is received", "then": "the group shows the payment as completed"},
+      {"kind": "edge_case", "given": "a payment whose confirmation arrives twice", "when": "the second confirmation is received", "then": "the payment is still shown once, as completed"},
+      {"kind": "failure_state", "given": "a payment with no answer from the provider for 10 minutes", "when": "the user opens the group", "then": "the payment shows as pending with the time it was started"}
+    ],
+    "task_004": [
+      {"kind": "happy_path", "given": "a user who has started a payment", "when": "the payment finishes", "then": "no full-screen ad was shown between the start and the result screen"},
+      {"kind": "edge_case", "given": "an ad that was already loading when the payment started", "when": "the ad finishes loading", "then": "it is not shown until the payment result has been dismissed"}
+    ],
+    "task_005": [
+      {"kind": "happy_path", "given": "a user whose verification code has not arrived after 60 seconds", "when": "they choose to log in by email link and open the link", "then": "they are logged in to their account"},
+      {"kind": "failure_state", "given": "an email link that is older than 15 minutes", "when": "the user opens it", "then": "they see that the link has expired and can request a new one"}
+    ],
+    "task_006": [
+      {"kind": "happy_path", "given": "a group of three where A owes B 100 and B owes C 100", "when": "A taps settle", "then": "A is asked to pay C 100 and the group shows no balances afterwards"},
+      {"kind": "edge_case", "given": "a group in which nobody owes anything", "when": "a member opens settle", "then": "they see that the group is settled and no payment is offered"}
+    ]
+  }
+}

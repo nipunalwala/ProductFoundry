@@ -72,6 +72,7 @@ def test_the_routing_table_matches_the_architecture():
     assert routing.chain_for("changelog_matching") == ["groq", "gemini", "openrouter"]
     assert routing.chain_for("cluster_labelling") == ["gemini", "groq", "openrouter"]
     assert routing.chain_for("competitor_filtering") == ["gemini", "groq", "openrouter"]
+    assert routing.chain_for("acceptance_criteria") == ["gemini", "groq", "openrouter"]
     assert routing.chain_for("prd") == ["gemini", "openrouter", "groq"]
     assert routing.chain_for("task_breakdown") == ["gemini", "openrouter", "groq"]
     assert routing.chain_for("pricing_recommendation") == ["gemini", "openrouter", "groq"]

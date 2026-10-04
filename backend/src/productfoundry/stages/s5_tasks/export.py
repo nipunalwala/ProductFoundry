@@ -3,15 +3,31 @@
 from collections.abc import Mapping
 from typing import Any
 
+from productfoundry.core.acceptance import AcceptanceCriteria
 from productfoundry.core.prd import Prd
 from productfoundry.core.tasks import TaskPlan
 
+KIND_NAMES = {"happy_path": "happy path", "edge_case": "edge case", "failure_state": "failure"}
 
-def export_tasks(plan: TaskPlan, prd: Prd, *, title: str) -> dict[str, Any]:
-    """The plan as plain data, with the order to build in and each requirement's statement."""
+
+def export_tasks(
+    plan: TaskPlan, prd: Prd, *, title: str, criteria: AcceptanceCriteria | None = None
+) -> dict[str, Any]:
+    """The plan as plain data, with the order to build in and each requirement's statement.
+
+    When the run has acceptance criteria, each task carries its own.
+    """
+    data = plan.model_dump(mode="json")
+    if criteria is not None:
+        by_task = {
+            task.task_id: task.model_dump(mode="json")["criteria"] for task in criteria.tasks
+        }
+        for epic in data["epics"]:
+            for task in epic["tasks"]:
+                task["acceptance_criteria"] = by_task.get(task["id"], [])
     return {
         "title": title,
-        **plan.model_dump(mode="json"),
+        **data,
         "build_order": [task.id for task in plan.in_dependency_order()],
         "requirements": {r.id: r.statement for r in prd.requirements},
     }
@@ -45,4 +61,11 @@ def render_tasks_markdown(export: Mapping[str, Any]) -> str:
                 for requirement in task["requirement_ids"]
             ),
         ]
+        if task.get("acceptance_criteria"):
+            lines += ["", "Acceptance criteria:"]
+            lines += [
+                f"- ({KIND_NAMES[criterion['kind']]}) Given {criterion['given']}, "
+                f"when {criterion['when']}, then {criterion['then']}"
+                for criterion in task["acceptance_criteria"]
+            ]
     return "\n".join(lines) + "\n"

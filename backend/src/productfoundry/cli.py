@@ -126,7 +126,9 @@ def build_parser() -> argparse.ArgumentParser:
     prd.add_argument("--out", type=Path, help="write to this file instead of printing")
     prd.set_defaults(handler=_cmd_prd)
 
-    tasks = commands.add_parser("tasks", help="export the task plan of a run, in build order")
+    tasks = commands.add_parser(
+        "tasks", help="export the task plan of a run, with its acceptance criteria"
+    )
     tasks.add_argument("run_id")
     tasks.add_argument("--format", choices=["md", "json"], default="md")
     tasks.add_argument("--out", type=Path, help="write to this file instead of printing")
@@ -203,6 +205,8 @@ def _orchestrator(args: argparse.Namespace, store: RunStore) -> Orchestrator:
     from productfoundry.stages.s3_pain_points import pain_points_stage
     from productfoundry.stages.s4_prd import prd_stage
     from productfoundry.stages.s5_tasks import tasks_stage
+    from productfoundry.stages.s6_roadmap import roadmap_stage
+    from productfoundry.stages.s7_acceptance import acceptance_stage
 
     stages = {
         "s1_competitors": competitors_stage,
@@ -210,6 +214,8 @@ def _orchestrator(args: argparse.Namespace, store: RunStore) -> Orchestrator:
         "s3_pain_points": pain_points_stage,
         "s4_prd": prd_stage,
         "s5_tasks": tasks_stage,
+        "s6_roadmap": roadmap_stage,
+        "s7_acceptance": acceptance_stage,
     }
     return Orchestrator(store, stages, services=_services(args))
 
@@ -409,6 +415,7 @@ def _cmd_prd(args: argparse.Namespace) -> int:
 
 
 def _cmd_tasks(args: argparse.Namespace) -> int:
+    from productfoundry.core.acceptance import AcceptanceCriteria
     from productfoundry.core.prd import Prd
     from productfoundry.core.tasks import TaskPlan
     from productfoundry.stages.s5_tasks.export import export_tasks, render_tasks_markdown
@@ -417,7 +424,11 @@ def _cmd_tasks(args: argparse.Namespace) -> int:
         run = store.get(args.run_id)
         plan = TaskPlan.model_validate(_stage_output(run, "s5_tasks", "task plan"))
         prd = Prd.model_validate(_stage_output(run, "s4_prd", "PRD"))
-    export = export_tasks(plan, prd, title=run.input.idea)
+    stages = {record.key: record for record in run.stages}
+    criteria = None
+    if "s7_acceptance" in stages and stages["s7_acceptance"].effective_output is not None:
+        criteria = AcceptanceCriteria.model_validate(stages["s7_acceptance"].effective_output)
+    export = export_tasks(plan, prd, title=run.input.idea, criteria=criteria)
     return _write_export(args, export, render_tasks_markdown)
 
 

@@ -30,7 +30,8 @@ file instead, with no database needed.
 
 ## Use
 
-From `backend/`. Stages 1 to 5 are real; later stages arrive with their phases.
+From `backend/`. Stages 1 to 5 and 7 are real. Stage 6 keeps PRD order until prioritization is
+built, and stage 8 arrives with its phase.
 
 ```
 py -m uv run productfoundry run --input input.json   # stops at the first checkpoint
@@ -59,7 +60,8 @@ py -m uv run productfoundry report RUN_ID [--format md|json] [--out FILE]
 exports the pain-point report with its quotes, each linked to its source.
 `productfoundry prd RUN_ID` takes the same options and exports the PRD, each
 requirement with the pain points or market gaps it cites, and
-`productfoundry tasks RUN_ID` exports the task plan in build order.
+`productfoundry tasks RUN_ID` exports the task plan in build order, each task
+with its acceptance criteria.
 
 ## Test
 

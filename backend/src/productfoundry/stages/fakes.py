@@ -4,6 +4,7 @@ from collections.abc import Mapping
 
 from pydantic import BaseModel
 
+from productfoundry.core.acceptance import AcceptanceCriteria, Criterion, TaskCriteria
 from productfoundry.core.competitors import Competitor, CompetitorList
 from productfoundry.core.pain_points import (
     RANKING_FORMULA,
@@ -17,6 +18,7 @@ from productfoundry.core.reviews import ProductReviewCounts, ReviewSet
 from productfoundry.core.run_input import RunInput, StoreIds
 from productfoundry.core.tasks import Epic, Task, TaskPlan
 from productfoundry.orchestrator.protocols import Services, Stage
+from productfoundry.stages.s6_roadmap import roadmap_stage
 
 
 def fake_competitors(
@@ -153,10 +155,25 @@ def fake_tasks(
     return TaskPlan(epics=[epic])
 
 
+def fake_acceptance(
+    run_input: RunInput, earlier_outputs: Mapping[str, BaseModel], services: Services
+) -> AcceptanceCriteria:
+    plan: TaskPlan = earlier_outputs["s5_tasks"]
+    criteria = [
+        Criterion(kind="happy_path", given="a signed-in user", when="they use it", then="it works"),
+        Criterion(kind="failure_state", given="no network", when="they use it", then="it says so"),
+    ]
+    return AcceptanceCriteria(
+        tasks=[TaskCriteria(task_id=task.id, criteria=criteria) for task in plan.tasks]
+    )
+
+
 FAKE_STAGES: dict[str, Stage] = {
     "s1_competitors": fake_competitors,
     "s2_reviews": fake_reviews,
     "s3_pain_points": fake_pain_points,
     "s4_prd": fake_prd,
     "s5_tasks": fake_tasks,
+    "s6_roadmap": roadmap_stage,  # the pass-through makes no outside request
+    "s7_acceptance": fake_acceptance,
 }

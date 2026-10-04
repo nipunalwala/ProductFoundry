@@ -194,7 +194,7 @@ name a *task*, never a provider or model.
 | Task group | Volume | Primary | Fallback 1 | Fallback 2 |
 |---|---|---|---|---|
 | Review sentiment, switching intent, changelog matching | High | Groq | Gemini Flash | OpenRouter free model |
-| Cluster labelling, competitor filtering | Medium | Gemini Flash | Groq | OpenRouter free model |
+| Cluster labelling, competitor filtering, acceptance criteria | Medium | Gemini Flash | Groq | OpenRouter free model |
 | PRD, task breakdown, pricing recommendation | Low, quality-critical | Gemini Flash | OpenRouter free model | Groq |
 
 - **Failure** = HTTP 429, timeout, server error, or output that fails the
