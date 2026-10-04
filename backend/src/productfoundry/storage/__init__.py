@@ -8,10 +8,13 @@ from productfoundry.storage.db import (
     make_sessions,
     upgrade,
 )
+from productfoundry.storage.llm import PostgresCallStore, PostgresUsageStore
 from productfoundry.storage.reviews import ReviewRepository
 from productfoundry.storage.run_store import PostgresRunStore
 
 __all__ = [
+    "PostgresCallStore",
+    "PostgresUsageStore",
     "PostgresRunStore",
     "ReviewRepository",
     "Sessions",

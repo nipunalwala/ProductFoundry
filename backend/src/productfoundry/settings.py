@@ -1,5 +1,6 @@
 """Configuration from the environment and `.env`. Secrets are never printed or logged."""
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL, make_url
 
@@ -14,6 +15,11 @@ class Settings(BaseSettings):
     postgres_db: str = "productfoundry"
     postgres_host: str = "127.0.0.1"
     postgres_port: int = 5433
+
+    # LLM providers. SecretStr keeps the values out of reprs and logs.
+    gemini_api_key: SecretStr | None = None
+    groq_api_key: SecretStr | None = None
+    openrouter_api_key: SecretStr | None = None
 
     def sqlalchemy_url(self) -> URL:
         if self.database_url:

@@ -38,7 +38,12 @@ py -m uv run productfoundry status [RUN_ID] [--output STAGE]
 py -m uv run productfoundry approve RUN_ID [--edit edited.json]
 py -m uv run productfoundry resume RUN_ID [--from-stage STAGE]
 py -m uv run productfoundry schema [NAME] [--out DIR]  # JSON Schema of the contracts
+py -m uv run productfoundry llm check                  # one small live call per provider
 ```
+
+LLM providers and their pinned models are set in
+`backend/src/productfoundry/llm/routing.toml`. Put `GEMINI_API_KEY`,
+`GROQ_API_KEY` and `OPENROUTER_API_KEY` in `.env`.
 
 ## Test
 

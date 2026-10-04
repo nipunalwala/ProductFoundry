@@ -105,7 +105,7 @@ where the table says so.
 | 0 | Toolchain and first green build | Done 2026-10-04. Lint and 1 test pass; `productfoundry --version` prints 0.1.0; the database container starts healthy and `CREATE EXTENSION vector` succeeds (pgvector 0.8.7 on PostgreSQL 17). uv is run as `py -m uv` because pip installed it outside PATH. The database is on host port 5433 because a native PostgreSQL already uses 5432 on this machine |
 | 1 | Schemas and the run state machine | Done 2026-10-04. Lint and 96 tests pass. All four schemas are v1. `approve` only records the approval; `resume` continues the run (the CLI does both). A stage that raises `QuotaExhausted` goes back to `pending`, so `resume` retries it. The CLI keeps runs in `.productfoundry/runs.json` (`--state-file`), a JSON dump of the in-memory store, so `status`, `approve` and `resume` work across commands until phase 2. `RunStore` contract tests are in `tests/test_run_store.py`, parametrised by store: phase 2 adds Postgres to the `store` fixture. `CompetitorList` already has `rejected` (needed in phase 4) and `ReviewSourceName` already lists Reddit and Product Hunt, to avoid a version bump later |
 | 2 | Storage | Done 2026-10-04. Lint and 114 tests pass with the database up (100 pass, 14 skip with a clear message when it is down). Migration `0001` matches the models (checked by a test). Run `productfoundry db upgrade` once per database; the CLI says so when tables are missing. Database tests use a separate `productfoundry_test` database on the same server and truncate it per test (`sessions` fixture in `tests/conftest.py`). `reviews.embedding` is `vector` with no dimension: phase 6 fixes the dimension when it pins the model. Review ids are derived from (source, source review id) by `core.ids.review_id`. An upsert of a known review refreshes text, rating, URL and date but keeps language, sentiment and embedding. `clusters` holds only id, run, size and negative share; phases 6 and 7 add their columns by migration. There is no product repository yet (phase 4 or 5 adds it). Settings come from `productfoundry.settings.Settings` (`DATABASE_URL` or `POSTGRES_*`, read from `.env`) |
-| 3 | LLM gateway | Not started |
+| 3 | LLM gateway | Built 2026-10-04; **live check not run** (there is no `.env` with keys yet: run `productfoundry llm check` once the three keys are in `.env`; it makes 3 calls). Lint and 173 tests pass. Models pinned in `llm/routing.toml` after looking them up: Gemini `gemini-3.8-flash`, Groq `openai/gpt-oss-120b` (free plan: 1,000 requests and 200K tokens a day, 8K tokens a minute), OpenRouter `nvidia/nemotron-3-super-120b-a12b:free` (50 requests a day until $10 of credit is bought). Google no longer publishes Gemini free-tier limits, so `requests_per_day = 250` for Gemini is a placeholder to correct from the AI Studio rate-limit page. Providers are asked for JSON mode with the JSON Schema appended to the prompt, and the gateway validates. The cache is the `response` column of `llm_calls` (migration `0002`); it is checked for every provider in the chain before any call. A provider with no key is passed over. `QuotaExhausted` is raised only when every provider was skipped for quota or answered 429; other failures raise `LlmFailed`, which fails the stage. A non-retryable error (401, 400) moves on without a retry. Tests build a `Gateway` with `FakeProvider` and in-memory stores from `llm/fakes.py`; `RecordingProvider` and `ReplayProvider` save and serve fixtures by task and prompt hash. A new task must be added to a group in `routing.toml` |
 | 4 | Stage 1: competitor research | Not started |
 | 5 | Stage 2: review collection | Not started |
 | 6 | Embeddings and clustering | Not started |
@@ -914,4 +914,13 @@ Not scheduled. Each becomes a phase when the owner asks for it.
 
 ## Notes for later
 
-Nothing yet. Phases add items here instead of building them.
+Phases add items here instead of building them.
+
+- Gateway: pace calls to each provider's per-minute limits (Groq's free plan
+  allows 8K tokens a minute). Today a per-minute 429 is retried once and then
+  falls back, which spends the next provider's daily quota. Needed before
+  phase 5 sends sentiment batches (noted in phase 3).
+- Gateway: daily usage is counted per UTC day, but Gemini's quota resets at
+  midnight Pacific time (noted in phase 3).
+- CLI: database commands take about 4 seconds to start on the development
+  machine, mostly importing SQLAlchemy (noted in phase 2).

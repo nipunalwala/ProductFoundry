@@ -137,6 +137,7 @@ class LlmCallRow(Base):
     latency_ms: Mapped[int] = mapped_column(server_default=text("0"))
     cost_usd: Mapped[Decimal] = mapped_column(Numeric(12, 6), server_default=text("0"))
     error: Mapped[str | None]
+    response: Mapped[dict[str, Any] | None]  # the validated object; also the cache
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
 
 

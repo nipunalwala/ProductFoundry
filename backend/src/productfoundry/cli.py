@@ -63,6 +63,10 @@ def build_parser() -> argparse.ArgumentParser:
     db.add_argument("action", choices=["upgrade"], help="upgrade: apply the migrations")
     db.set_defaults(handler=_cmd_db)
 
+    llm = commands.add_parser("llm", help="LLM gateway tools")
+    llm.add_argument("action", choices=["check"], help="check: one small live call per provider")
+    llm.set_defaults(handler=_cmd_llm)
+
     schema = commands.add_parser("schema", help="export the JSON Schema of the contracts")
     schema.add_argument("name", nargs="?", choices=sorted(SCHEMAS), help="print one schema")
     schema.add_argument("--out", type=Path, help="write every schema to this directory")
@@ -187,6 +191,46 @@ def _cmd_db(args: argparse.Namespace) -> int:
         engine.dispose()
     print("database is up to date")
     return 0
+
+
+def _cmd_llm(args: argparse.Namespace) -> int:
+    from pydantic import BaseModel
+
+    from productfoundry import llm, storage
+    from productfoundry.llm.fakes import InMemoryCallStore, InMemoryUsageStore
+    from productfoundry.settings import Settings
+
+    class Ping(BaseModel):
+        ok: bool
+
+    routing = llm.load_routing()
+    providers = llm.live_providers(routing, Settings())
+    engine = None
+    if args.memory:
+        calls, usage = InMemoryCallStore(), InMemoryUsageStore()
+    else:
+        engine = storage.make_engine()
+        storage.check_ready(engine)
+        sessions = storage.make_sessions(engine)
+        calls, usage = storage.PostgresCallStore(sessions), storage.PostgresUsageStore(sessions)
+    gateway = llm.Gateway(routing, providers, calls, usage)
+    messages = [{"role": "user", "content": 'Reply with the JSON object {"ok": true}.'}]
+
+    failed = False
+    try:
+        for name, spec in routing.providers.items():
+            if name not in providers:
+                print(f"{name:<11} {spec.model:<52} no API key in .env")
+                failed = True
+                continue
+            call = gateway.check(name, Ping, messages)
+            detail = "" if call.outcome == "ok" else f"  {call.error}"
+            print(f"{name:<11} {spec.model:<52} {call.outcome:<14} {call.latency_ms} ms{detail}")
+            failed = failed or call.outcome != "ok"
+    finally:
+        if engine is not None:
+            engine.dispose()
+    return 1 if failed else 0
 
 
 def _cmd_schema(args: argparse.Namespace) -> int:

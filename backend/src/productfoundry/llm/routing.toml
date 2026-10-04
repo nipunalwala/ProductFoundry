@@ -1,0 +1,42 @@
+# The one place that names LLM providers and models (ARCHITECTURE.md section 7).
+# Model ids are pinned; never "latest". Looked up on 2026-10-04:
+#   Gemini      https://ai.google.dev/gemini-api/docs/models and /pricing
+#   Groq        https://console.groq.com/docs/rate-limits (free plan)
+#   OpenRouter  https://openrouter.ai/api/v1/models and /docs/api-reference/limits
+
+near_limit = 0.9              # skip a provider above this share of a daily limit
+retry_backoff_seconds = 2.0   # wait before the one retry on the same provider
+timeout_seconds = 60.0
+
+[providers.gemini]
+model = "gemini/gemini-3.8-flash"
+api_key_setting = "gemini_api_key"
+# Google no longer publishes free-tier limits; they are shown per account at
+# https://aistudio.google.com/rate-limit. This is a cautious placeholder: check
+# that page and correct it.
+requests_per_day = 250
+
+[providers.groq]
+model = "groq/openai/gpt-oss-120b"
+api_key_setting = "groq_api_key"
+requests_per_day = 1000
+tokens_per_day = 200000
+
+[providers.openrouter]
+# Free model with JSON output support. 50 requests a day across all free models
+# until $10 of credit has been bought, then 1000.
+model = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+api_key_setting = "openrouter_api_key"
+requests_per_day = 50
+
+[groups.high_volume]
+tasks = ["review_sentiment", "switching_intent", "changelog_matching"]
+chain = ["groq", "gemini", "openrouter"]
+
+[groups.medium]
+tasks = ["cluster_labelling", "competitor_filtering"]
+chain = ["gemini", "groq", "openrouter"]
+
+[groups.quality]
+tasks = ["prd", "task_breakdown", "pricing_recommendation"]
+chain = ["gemini", "openrouter", "groq"]
