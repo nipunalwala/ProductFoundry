@@ -332,6 +332,20 @@ def test_an_export_that_quotes_reviews_needs_the_stored_reviews(api):
     assert response.status_code == 400 and "stored reviews" in response.text
 
 
+def test_a_report_saved_under_an_older_schema_is_refused_with_what_to_do(real_stage_3):
+    api = real_stage_3
+    run_id = api.at_pain_points()
+    run = api.store.get(run_id)
+    old = dict(run.stage(S3).output, schema_version=2)
+    del old["trend_settings"]
+    run.stage(S3).output = old
+    api.store.save(run)
+
+    response = api.client.get(f"/runs/{run_id}/exports/report")
+    assert response.status_code == 400 and "older format" in response.text
+    assert "--from-stage s3_pain_points" in response.text
+
+
 # The worker's job and the committed schema
 
 

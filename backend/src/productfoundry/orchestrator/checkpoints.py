@@ -6,7 +6,8 @@ from typing import Any
 from productfoundry.core.errors import ProductFoundryError
 from productfoundry.core.ids import product_id
 from productfoundry.core.names import normalise_name
-from productfoundry.core.pain_points import pain_point_score
+from productfoundry.core.pain_points import TrendSettings, pain_point_score
+from productfoundry.ml.trends import merged_trend
 
 _MAX_QUOTES = 5
 
@@ -75,7 +76,7 @@ def edit_pain_points(
         if len(clusters) < 2 or len(set(clusters)) != len(clusters):
             raise ProductFoundryError("a merge names two or more different pain points")
         merged = [present(cluster, "merge") for cluster in clusters]
-        points[clusters[0]] = _merge(merged)
+        points[clusters[0]] = _merge(merged, output)
         for cluster in clusters[1:]:
             del points[cluster]
     for name, label in (rename or {}).items():
@@ -94,8 +95,10 @@ def edit_pain_points(
     return {**output, "pain_points": [point | {"rank": n} for n, point in enumerate(ordered, 1)]}
 
 
-def _merge(points: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _merge(points: Sequence[Mapping[str, Any]], report: Mapping[str, Any]) -> dict[str, Any]:
     """One pain point holding the reviews of all of them. The first gives the label."""
+    settings = TrendSettings.model_validate(report["trend_settings"])
+    switching = [review for point in points for review in point.get("switching_review_ids", [])]
     target = dict(points[0])
     count = sum(point["review_count"] for point in points)
     negative = sum(round(point["negative_share"] * point["review_count"]) for point in points)
@@ -120,5 +123,7 @@ def _merge(points: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         quote_review_ids=quotes,
         quote_glosses={review: glosses[review] for review in quotes if review in glosses},
         score=pain_point_score(count, negative / count, worst["severity"]),
+        trend=merged_trend([point["trend"] for point in points], settings).model_dump(mode="json"),
+        switching_review_ids=list(dict.fromkeys(switching)),
     )
     return target

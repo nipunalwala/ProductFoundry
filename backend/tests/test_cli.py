@@ -124,7 +124,7 @@ def test_schema_lists_prints_and_writes_json_schema(cli, tmp_path):
     assert code == 0 and out.split() == [
         text for name, model in SCHEMAS.items() for text in (name, f"v{schema_version_of(model)}")
     ]
-    assert "PainPointReport  v2" in out and "Prd  v1" in out
+    assert "PainPointReport  v3" in out and "Prd  v1" in out
 
     code, out, _ = cli("schema", "RunInput")
     assert code == 0 and json.loads(out)["title"] == "RunInput"
@@ -135,7 +135,7 @@ def test_schema_lists_prints_and_writes_json_schema(cli, tmp_path):
     assert sorted(p.name for p in out_dir.iterdir()) == sorted(
         f"{name}.v{schema_version_of(model)}.schema.json" for name, model in SCHEMAS.items()
     )
-    assert json.loads((out_dir / "PainPointReport.v2.schema.json").read_text(encoding="utf-8"))
+    assert json.loads((out_dir / "PainPointReport.v3.schema.json").read_text(encoding="utf-8"))
 
 
 def test_the_competitor_checkpoint_prints_the_list_and_takes_remove_and_add(

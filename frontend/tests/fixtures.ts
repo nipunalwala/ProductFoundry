@@ -106,6 +106,42 @@ function point(rank: number, cluster: string, label: string): ReportExport["pain
     score: 14,
     products: ["Splitly"],
     quotes: [{ ...QUOTE, review_id: `rev_${rank}` }],
+    // Pain point 1 doubles its share; March had too few reviews to say anything.
+    trend: {
+      months: ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"].map(
+        (month, index) => {
+          const thin = month === "2026-03";
+          const reviews = thin ? 0 : rank === 1 && index >= 3 ? 8 : 4 - rank + 1;
+          const total = thin ? 2 : 40;
+          return {
+            month,
+            reviews,
+            total_reviews: total,
+            enough: !thin,
+            share: thin ? null : reviews / total,
+          };
+        },
+      ),
+      recent_share: rank === 1 ? 0.2 : 0.05,
+      previous_share: rank === 1 ? 0.1 : 0.05,
+      growth: rank === 1 ? 1 : 0,
+      rising: rank === 1,
+    },
+    switching:
+      rank === 1
+        ? [
+            {
+              ...QUOTE,
+              review_id: "rev_switch",
+              text: "payment failed again so I am switching to Tabby",
+              language: "en",
+              translation: null,
+              intent: "leaving",
+              other_product: "Tabby",
+              reason: "payments keep failing",
+            },
+          ]
+        : [],
   };
 }
 
@@ -121,6 +157,24 @@ export const REPORT: ReportExport = {
     point(3, "cl_c", "Expense limit paywall"),
   ],
   junk_clusters: [{ cluster_id: "cl_z", review_count: 9, reason: "The reviews are vague." }],
+  trend_settings: {
+    months: 6,
+    window_months: 3,
+    min_month_reviews: 5,
+    min_window_reviews: 15,
+    rising_threshold: 0.25,
+  },
+  switching_table: [
+    {
+      from_product: "Splitly",
+      to_product: "Tabby",
+      count: 2,
+      reasons: ["payments keep failing"],
+      review_ids: ["rev_switch", "rev_other"],
+    },
+    { from_product: "Splitly", to_product: null, count: 1, reasons: [], review_ids: ["rev_x"] },
+  ],
+  switching_review_count: 3,
 };
 
 export const PRD: PrdExport = {

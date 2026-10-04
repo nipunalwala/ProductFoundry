@@ -134,7 +134,7 @@ Rules:
 |---|---|---|---|---|
 | 1 | Competitor research | RunInput | `CompetitorList`: name, URL, positioning, target users, store ids, why it is a competitor | Yes |
 | 2 | Review collection and analysis | CompetitorList | `ReviewSet`: counts per source and product; reviews are rows in the database, not in the JSON | No |
-| 3 | Pain-point discovery | ReviewSet | `PainPointReport`: ranked clusters with label, severity, review count, share of negative reviews, review ids of sample quotes | Yes |
+| 3 | Pain-point discovery | ReviewSet | `PainPointReport`: ranked clusters with label, severity, review count, share of negative reviews, review ids of sample quotes, a monthly trend, and the reviews about switching; plus a switching table for the run | Yes |
 | 4 | PRD generation | 1 + 3 (+ market panel when present) | `Prd`: problem, users, goals, requirements, success metrics. Each requirement has `evidence: [cluster id or market gap id]`, at least one | No |
 | 5 | Task breakdown | Prd, tech stack | `TaskPlan`: epics and tasks with title, description, requirement ids, dependencies, effort estimate | No |
 | 6 | Roadmap prioritization | TaskPlan + PainPointReport | `Roadmap`: RICE per item with the source of each number, an explanation, and user overrides | Yes |
@@ -154,7 +154,15 @@ Notes:
   from the stage or from a checkpoint edit, every quote, count and score in it
   is checked against the saved clusters and the stored reviews.
 - At checkpoint 3 the user can rename, merge, drop and re-rank pain points. A
-  merged pain point lists the clusters it holds and counts all their reviews.
+  merged pain point lists the clusters it holds and counts all their reviews;
+  its trend is recomputed from the summed monthly counts and its switching
+  reviews are the union.
+- Stage 3 also computes review trends and switching intent (section 10). Trends
+  are pure functions of the stored review dates. Switching costs one LLM call
+  per 20 candidate reviews; candidates are chosen without an LLM. Both are
+  checked against the stored reviews like every other figure in the report.
+- A stage output saved under an older schema version is not migrated: its
+  exports are refused with a message saying which stage to re-run.
 - Stage 4 may cite two kinds of evidence: the cluster of an approved pain point,
   and a market gap. Until the market panel exists a market gap is one fact per
   competitor from stage 1, with its own `gap_` id. A citation that does not
@@ -279,10 +287,24 @@ reviews and fetches only newer ones.
 
 Features built on top:
 
-- **Review trends**: monthly share of all reviews per cluster (not raw counts);
-  growth = last three months versus the three before.
-- **Switching intent**: reviews classed as leaving, switched to, switched from
-  or considering; output is a from/to/count/reasons table.
+- **Review trends** (built, in stage 3): monthly share of all reviews per
+  cluster (not raw counts), over the 12 months ending at the latest review. The
+  denominator is every stored review of the run's products in that month,
+  whatever its sentiment. Growth = (share over the last three months - share
+  over the three before) / the earlier share, each share pooled over its
+  window. A pain point is rising when growth is above 25%, or when it was
+  absent before and is present now. A month with fewer than 5 reviews is marked
+  and drawn as a gap, never as zero; a window with fewer than 15 reviews gives
+  no growth figure. The settings are in `ml/config.toml` and are written in the
+  report.
+- **Switching intent** (built, in stage 3): a keyword list (English and
+  Hinglish) and similarity to a few seed sentences pick candidate reviews; the
+  gateway classes each as leaving, switched to, switched from, considering or
+  none, and extracts the other product and a short reason. The other product
+  must appear in the review's own text, or the answer is rejected. Output: the
+  switching reviews, the ones belonging to each pain point, and a
+  from/to/count/reasons table. "From" or "to" is empty when the review names no
+  other product.
 - **Changelog tracking**: weekly; each release item is matched to clusters and
   PRD requirements; alerts when the incumbent fixes a targeted gap.
 - **Pricing recommendation**: tiers, limits, free tier or trial and annual
@@ -303,7 +325,7 @@ The agent is judged on whether it finds what real users complain about.
 | Task quality | Human rating 1-5 for clarity, size and dependencies | Average 4 or more |
 | Acceptance criteria | Human check that each criterion is testable | Nearly all |
 | Pricing extraction | Field accuracy against manually recorded pages | Near exact |
-| Switching intent | Precision on 200 hand-labelled reviews | Tracked |
+| Switching intent | Precision on 200 hand-labelled reviews (`eval/switching/label.py`) | Tracked |
 | Cost and speed | Tokens, API cost and wall time per full run | Tracked per release |
 
 Targets start loose and tighten once a baseline exists.

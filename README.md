@@ -57,11 +57,29 @@ stand-in, with no outside request.
 py -m uv run productfoundry report RUN_ID [--format md|json] [--out FILE]
 ```
 
-exports the pain-point report with its quotes, each linked to its source.
+exports the pain-point report with its quotes, each linked to its source, each
+pain point's trend (its share of all reviews over the last three months against
+the three before) and a table of the reviews that talk about switching products.
 `productfoundry prd RUN_ID` takes the same options and exports the PRD, each
 requirement with the pain points or market gaps it cites, and
 `productfoundry tasks RUN_ID` exports the task plan in build order, each task
 with its acceptance criteria.
+
+A report saved before trends and switching were added (schema version 2) cannot
+be exported; re-run it with `resume RUN_ID --from-stage s3_pain_points`.
+
+### Checking switching intent
+
+```
+py -m uv run python eval/switching/label.py prepare RUN_ID [--limit 200]
+py -m uv run python eval/switching/label.py precision
+```
+
+`prepare` writes `eval/switching/to_label.csv`: up to 200 of the run's reviews
+in a shuffled order, without the model's answer. Fill the `owner_label` column
+with `leaving`, `switched_from`, `switched_to`, `considering` or `none`, then
+run `precision` to see how often the model's switching labels agree with yours.
+The file holds review text and is not committed. Neither command calls an LLM.
 
 ## API and worker
 

@@ -11,6 +11,8 @@ from productfoundry.core.pain_points import (
     LanguageCounts,
     PainPoint,
     PainPointReport,
+    Trend,
+    TrendSettings,
     pain_point_score,
 )
 from productfoundry.core.prd import Prd, Requirement, market_gaps
@@ -92,6 +94,7 @@ def fake_pain_points(
                 product_ids=[product.product_id for product in reviews.products],
                 quote_review_ids=["rev_fake0", "rev_fake1", "rev_fake2"],
                 score=pain_point_score(4 * products, 0.8, 5),
+                trend=Trend(months=[]),
             )
         ],
         ranking_formula=RANKING_FORMULA,
@@ -100,6 +103,13 @@ def fake_pain_points(
         ),
         clustered_reviews=5 * products,
         noise_reviews=products,
+        trend_settings=TrendSettings(
+            months=12,
+            window_months=3,
+            min_month_reviews=5,
+            min_window_reviews=15,
+            rising_threshold=0.25,
+        ),
     )
 
 

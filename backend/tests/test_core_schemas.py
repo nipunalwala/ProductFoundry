@@ -51,6 +51,7 @@ def pain_point(**overrides) -> dict:
         "product_ids": ["prod_a"],
         "quote_review_ids": ["rev_1", "rev_2", "rev_3"],
         "score": 3.6,
+        "trend": {"months": []},
     }
     data.update(overrides)
     return data
@@ -63,6 +64,13 @@ def report(**overrides) -> dict:
         "language_counts": {"english": 5, "hinglish": 3, "not_analysed": 2},
         "clustered_reviews": 20,
         "noise_reviews": 2,
+        "trend_settings": {
+            "months": 12,
+            "window_months": 3,
+            "min_month_reviews": 5,
+            "min_window_reviews": 15,
+            "rising_threshold": 0.25,
+        },
     }
     data.update(overrides)
     return data
@@ -257,6 +265,33 @@ def test_a_cluster_is_a_pain_point_or_junk_not_both():
         PainPointReport.model_validate(report(pain_points=merged, junk_clusters=junk))
 
 
+def test_trends_and_switching_are_part_of_the_report():
+    month = {"month": "2026-09", "reviews": 4, "total_reviews": 20, "enough": True}
+    switching = [{"review_id": "rev_1", "intent": "leaving", "other_product": "Tricount"}]
+    row = {"from_product": "Walnut", "to_product": "Tricount", "count": 1, "review_ids": ["rev_1"]}
+    point = pain_point(trend={"months": [month], "rising": True}, switching_review_ids=["rev_1"])
+    parsed = PainPointReport.model_validate(
+        report(pain_points=[point], switching_reviews=switching, switching_table=[row])
+    )
+    assert parsed.pain_points[0].trend.months[0].reviews == 4
+    assert parsed.switching_table[0].to_product == "Tricount"
+
+    def rejected(message, **overrides):
+        with pytest.raises(ValidationError, match=message):
+            PainPointReport.model_validate(report(**overrides))
+
+    rejected("more reviews in a month", pain_points=[
+        pain_point(trend={"months": [month | {"reviews": 21}]})
+    ])  # fmt: skip
+    rejected("pattern", pain_points=[pain_point(trend={"months": [month | {"month": "Sept"}]})])
+    rejected("not in switching_reviews", pain_points=[pain_point(switching_review_ids=["rev_1"])])
+    rejected("appears once in switching_reviews", switching_reviews=switching * 2)
+    rejected("cites reviews not in switching_reviews", switching_table=[row])
+    rejected("count must equal", switching_reviews=switching, switching_table=[row | {"count": 2}])
+    rejected("Input should be", switching_reviews=[switching[0] | {"intent": "angry"}])
+    rejected("valid dictionary or instance of TrendSettings", trend_settings=None)
+
+
 def test_a_merged_pain_point_names_its_clusters_and_glosses_its_hinglish_quotes():
     point = pain_point(merged_cluster_ids=["cl_b"], quote_glosses={"rev_2": "It is very slow."})
     parsed = PainPointReport.model_validate(report(pain_points=[point])).pain_points[0]
@@ -270,7 +305,7 @@ def test_a_merged_pain_point_names_its_clusters_and_glosses_its_hinglish_quotes(
 @pytest.mark.parametrize("name", sorted(SCHEMAS))
 def test_every_schema_is_versioned_and_exports_json_schema(name):
     model = SCHEMAS[name]
-    version = 2 if name == "PainPointReport" else 1
+    version = 3 if name == "PainPointReport" else 1
     assert schema_version_of(model) == version
     json_schema = model.model_json_schema()
     assert json_schema["properties"]["schema_version"]["const"] == version

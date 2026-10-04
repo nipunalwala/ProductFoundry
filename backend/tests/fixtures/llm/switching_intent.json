@@ -1,0 +1,21 @@
+{
+  "_note": "Written by hand before the first live run: invented reviews in English and Hinglish about an invented product, Splitly, with the labels a careful reader would give.",
+  "reviews": [
+    "The payment failed again so I am switching to Tabby today.",
+    "payment fail hota rehta hai, ye app chhod diya, ab Tabby use karta hu",
+    "Moved to this from Tabby and it is so much simpler.",
+    "Too many ads now. Looking for an alternative.",
+    "Better than nothing but the login code never comes.",
+    "Splitly was great until the update, uninstalling Splitly now."
+  ],
+  "answer": {
+    "labels": [
+      {"n": 1, "intent": "leaving", "other_product": "Tabby", "reason": "payments keep failing"},
+      {"n": 2, "intent": "switched_from", "other_product": "Tabby", "reason": "payments keep failing"},
+      {"n": 3, "intent": "switched_to", "other_product": "Tabby", "reason": "simpler to use"},
+      {"n": 4, "intent": "considering", "other_product": null, "reason": "too many ads"},
+      {"n": 5, "intent": "none", "other_product": null, "reason": null},
+      {"n": 6, "intent": "leaving", "other_product": "Splitly", "reason": "worse after the update"}
+    ]
+  }
+}

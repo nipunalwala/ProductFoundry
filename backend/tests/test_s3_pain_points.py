@@ -96,6 +96,9 @@ class Labeller:
 
     def complete(self, request) -> ProviderResponse:
         payload = json.loads(request.messages[1]["content"])
+        if request.task == "switching_intent":  # nothing in these reviews is about switching
+            labels = [{"n": review["n"], "intent": "none"} for review in payload["reviews"]]
+            return ProviderResponse(json.dumps({"labels": labels}))
         self.payloads.append(payload)
         theme = next(word for word in THEMES if word in payload["reviews"][0]["text"])
         if theme == self._junk:
@@ -143,8 +146,10 @@ def run_stage(provider=None, **kwargs) -> tuple[PainPointReport, Services, Label
 
 
 def evidence(used: Services):
-    """What the validator checks a report against: the run's clusters and stored reviews."""
-    return used.clusters.for_run("run_a"), run_reviews(COMPETITORS, used.reviews)[1]
+    """What the validator checks a report against: the run's clusters, its stored reviews
+    and the names of its products."""
+    names, reviews = run_reviews(COMPETITORS, used.reviews)
+    return used.clusters.for_run("run_a"), reviews, names
 
 
 # The stage
@@ -152,7 +157,7 @@ def evidence(used: Services):
 
 def test_clusters_become_a_ranked_report_with_counts_from_the_stored_reviews():
     report, used, provider = run_stage()
-    clusters, reviews = evidence(used)
+    clusters, reviews, names = evidence(used)
 
     assert [p.label for p in report.pain_points] == [
         "Payments fail after money is debited",
@@ -171,13 +176,13 @@ def test_clusters_become_a_ranked_report_with_counts_from_the_stored_reviews():
         "english": 29, "hinglish": 14, "not_analysed": 1,
     }  # fmt: skip
     assert (report.clustered_reviews, report.noise_reviews) == (38, 0)
-    assert report_problems(report, clusters, reviews) == []
+    assert report_problems(report, clusters, reviews, names) == []
     assert len(provider.payloads) == 3  # one call per cluster
 
 
 def test_only_the_representative_reviews_of_a_cluster_are_sent_to_the_llm():
     _, used, provider = run_stage()
-    clusters, reviews = evidence(used)
+    clusters, reviews, names = evidence(used)
     for payload, cluster in zip(provider.payloads, clusters, strict=True):
         assert payload["cluster_size"] == cluster.size
         assert payload["products"] == ["Splitly", "Tabby"]
@@ -189,7 +194,7 @@ def test_only_the_representative_reviews_of_a_cluster_are_sent_to_the_llm():
 
 def test_quotes_are_review_ids_of_the_cluster_and_hinglish_quotes_carry_a_gloss():
     report, used, _ = run_stage()
-    clusters, reviews = evidence(used)
+    clusters, reviews, names = evidence(used)
     members = {cluster.id: set(cluster.review_ids) for cluster in clusters}
     glossed = 0
     for point in report.pain_points:
@@ -305,13 +310,13 @@ def test_the_answer_schema_rejects(answer, message):
 
 def test_a_report_that_the_stored_evidence_does_not_back_is_rejected():
     report, used, _ = run_stage()
-    clusters, reviews = evidence(used)
+    clusters, reviews, names = evidence(used)
     first, second = report.pain_points[0], report.pain_points[1]
 
     def problems(**changes) -> str:
         point = first.model_copy(update=changes)
         changed = report.model_copy(update={"pain_points": [point, *report.pain_points[1:]]})
-        return "; ".join(report_problems(changed, clusters, reviews))
+        return "; ".join(report_problems(changed, clusters, reviews, names))
 
     foreign = [*first.quote_review_ids[:2], second.quote_review_ids[0]]
     assert "quotes reviews that are not in the cluster" in problems(
@@ -328,7 +333,9 @@ def test_a_report_that_the_stored_evidence_does_not_back_is_rejected():
     assert "quote_glosses must translate the Hinglish quotes" in problems(quote_glosses={})
 
     def report_with(**changes) -> str:
-        return "; ".join(report_problems(report.model_copy(update=changes), clusters, reviews))
+        return "; ".join(
+            report_problems(report.model_copy(update=changes), clusters, reviews, names)
+        )
 
     assert "not ordered by score" in report_with(
         pain_points=[
@@ -343,19 +350,22 @@ def test_a_report_that_the_stored_evidence_does_not_back_is_rejected():
     assert "noise_reviews is 2" in report_with(noise_reviews=2)
 
     with pytest.raises(StageOutputInvalid, match="does not match the stored evidence"):
-        check_report(report.model_copy(update={"noise_reviews": 2}), clusters, reviews)
-    check_report(report, clusters, reviews)
+        check_report(report.model_copy(update={"noise_reviews": 2}), clusters, reviews, names)
+    check_report(report, clusters, reviews, names)
 
 
 def test_a_wrong_junk_count_or_an_unknown_junk_cluster_is_rejected():
     report, used, _ = run_stage(junk="ads")
-    clusters, reviews = evidence(used)
+    clusters, reviews, names = evidence(used)
     junk = report.junk_clusters[0]
     wrong = report.model_copy(
         update={"junk_clusters": [junk.model_copy(update={"review_count": 3})]}
     )
-    assert "review_count is 3, the cluster holds 12" in report_problems(wrong, clusters, reviews)[0]
-    assert "no such cluster" in report_problems(report, clusters[:2], reviews)[0]
+    assert (
+        "review_count is 3, the cluster holds 12"
+        in report_problems(wrong, clusters, reviews, names)[0]
+    )
+    assert "no such cluster" in report_problems(report, clusters[:2], reviews, names)[0]
 
 
 # The checkpoint
@@ -367,7 +377,7 @@ def edited(report: PainPointReport, **edits) -> PainPointReport:
 
 def test_merged_pain_points_keep_all_their_reviews():
     report, used, _ = run_stage()
-    clusters, reviews = evidence(used)
+    clusters, reviews, names = evidence(used)
     payment, login, ads = report.pain_points
 
     merged = edited(report, merge=[["3", "1"]])
@@ -383,17 +393,17 @@ def test_merged_pain_points_keep_all_their_reviews():
         r for r in point.quote_review_ids if reviews[r].language == "hinglish"
     }
     assert [p.rank for p in merged.pain_points] == [1, 2]
-    assert report_problems(merged, clusters, reviews, ranked_by_score=False) == []
+    assert report_problems(merged, clusters, reviews, names, ranked_by_score=False) == []
 
     everything = edited(report, merge=[["1", "2", "3"]])
     assert everything.pain_points[0].review_count == 38
     assert everything.pain_points[0].negative_share == 28 / 38
-    assert report_problems(everything, clusters, reviews, ranked_by_score=False) == []
+    assert report_problems(everything, clusters, reviews, names, ranked_by_score=False) == []
 
 
 def test_drop_rename_and_rank_keep_counts_correct():
     report, used, _ = run_stage()
-    clusters, reviews = evidence(used)
+    clusters, reviews, names = evidence(used)
     payment, login, ads = report.pain_points
 
     changed = edited(report, drop=["2"], rename={"3": "Ads after every tap"}, rank=["3"])
@@ -403,7 +413,7 @@ def test_drop_rename_and_rank_keep_counts_correct():
     ]
     assert changed.pain_points[0].score == ads.score
     assert (changed.clustered_reviews, changed.noise_reviews) == (38, 0)
-    assert report_problems(changed, clusters, reviews, ranked_by_score=False) == []
+    assert report_problems(changed, clusters, reviews, names, ranked_by_score=False) == []
 
     by_id = edited(report, drop=[login.cluster_id], rank=[ads.cluster_id, payment.cluster_id])
     assert [p.cluster_id for p in by_id.pain_points] == [ads.cluster_id, payment.cluster_id]
@@ -514,7 +524,7 @@ def test_the_run_stops_at_the_checkpoint_and_the_edit_is_what_is_kept(run_input)
     run = run_to_checkpoint(orchestrator, run_input)
     assert run.status is RunStatus.AWAITING_APPROVAL
     original = copy.deepcopy(run.stage(S3).output)
-    assert original["schema_version"] == 2 and len(original["pain_points"]) == 3
+    assert original["schema_version"] == 3 and len(original["pain_points"]) == 3
 
     orchestrator.approve(run.id, edit_pain_points(original, merge=[["1", "2"]]))
     run = orchestrator.resume(run.id)

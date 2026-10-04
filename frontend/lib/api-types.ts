@@ -370,6 +370,12 @@ export interface components {
             severity: number;
             /** Severity Reason */
             severity_reason: string;
+            /**
+             * Switching Review Ids
+             * @default []
+             */
+            switching_review_ids: string[];
+            trend: components["schemas"]["Trend"];
         };
         /**
          * PainPointEdits
@@ -417,10 +423,21 @@ export interface components {
             ranking_formula: string;
             /**
              * Schema Version
-             * @default 2
+             * @default 3
              * @constant
              */
-            schema_version: 2;
+            schema_version: 3;
+            /**
+             * Switching Reviews
+             * @default []
+             */
+            switching_reviews: components["schemas"]["SwitchingReview"][];
+            /**
+             * Switching Table
+             * @default []
+             */
+            switching_table: components["schemas"]["SwitchingRow"][];
+            trend_settings: components["schemas"]["TrendSettings"];
         };
         /**
          * Platform
@@ -713,6 +730,47 @@ export interface components {
              */
             google_play: string | null;
         };
+        /**
+         * SwitchingIntent
+         * @description What a review says about switching, seen from the product it reviews.
+         * @enum {string}
+         */
+        SwitchingIntent: "leaving" | "switched_to" | "switched_from" | "considering";
+        /** SwitchingReview */
+        SwitchingReview: {
+            intent: components["schemas"]["SwitchingIntent"];
+            /**
+             * Other Product
+             * @default null
+             */
+            other_product: string | null;
+            /**
+             * Reason
+             * @default null
+             */
+            reason: string | null;
+            /** Review Id */
+            review_id: string;
+        };
+        /**
+         * SwitchingRow
+         * @description One line of the switching table: reviews that moved, or may move, the same way.
+         */
+        SwitchingRow: {
+            /** Count */
+            count: number;
+            /** From Product */
+            from_product: string | null;
+            /**
+             * Reasons
+             * @default []
+             */
+            reasons: string[];
+            /** Review Ids */
+            review_ids: string[];
+            /** To Product */
+            to_product: string | null;
+        };
         /** Task */
         Task: {
             /**
@@ -747,6 +805,63 @@ export interface components {
              * @constant
              */
             schema_version: 1;
+        };
+        /**
+         * Trend
+         * @description The pain point's monthly share of all reviews, and whether it is growing.
+         *
+         *     Shares, not raw counts: a release that doubles the reviews doubles every count.
+         */
+        Trend: {
+            /**
+             * Growth
+             * @default null
+             */
+            growth: number | null;
+            /** Months */
+            months: components["schemas"]["TrendPoint"][];
+            /**
+             * Previous Share
+             * @default null
+             */
+            previous_share: number | null;
+            /**
+             * Recent Share
+             * @default null
+             */
+            recent_share: number | null;
+            /**
+             * Rising
+             * @default false
+             */
+            rising: boolean;
+        };
+        /** TrendPoint */
+        TrendPoint: {
+            /** Enough */
+            enough: boolean;
+            /** Month */
+            month: string;
+            /** Reviews */
+            reviews: number;
+            /** Total Reviews */
+            total_reviews: number;
+        };
+        /**
+         * TrendSettings
+         * @description How trends were computed. Kept in the report so an edit recomputes them the same way.
+         */
+        TrendSettings: {
+            /** Min Month Reviews */
+            min_month_reviews: number;
+            /** Min Window Reviews */
+            min_window_reviews: number;
+            /** Months */
+            months: number;
+            /** Rising Threshold */
+            rising_threshold: number;
+            /** Window Months */
+            window_months: number;
         };
     };
     responses: never;

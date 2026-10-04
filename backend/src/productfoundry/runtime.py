@@ -158,8 +158,8 @@ def check_pain_point_edit(
     except ValidationError:
         return  # approval reports schema errors
     competitors = CompetitorList.model_validate(run.stage("s1_competitors").effective_output)
-    _, stored = run_reviews(competitors, reviews)
-    check_report(report, clusters.for_run(run.id), stored, ranked_by_score=False)
+    names, stored = run_reviews(competitors, reviews)
+    check_report(report, clusters.for_run(run.id), stored, names, ranked_by_score=False)
 
 
 # Exports
@@ -198,7 +198,15 @@ def _evidence(run: RunRecord, reviews: ReviewStore | None):
         raise ProductFoundryError("the export quotes stored reviews, which --memory does not keep")
     competitors = CompetitorList.model_validate(run.stage("s1_competitors").effective_output)
     names, stored = run_reviews(competitors, reviews)
-    return PainPointReport.model_validate(output), names, stored
+    try:
+        report = PainPointReport.model_validate(output)
+    except ValidationError:
+        # A report saved under an earlier schema version, before trends and switching.
+        raise ProductFoundryError(
+            f"run {run.id} has a pain-point report in an older format; "
+            f"re-run it with `resume {run.id} --from-stage s3_pain_points`"
+        ) from None
+    return report, names, stored
 
 
 def _report(run: RunRecord, reviews: ReviewStore | None):

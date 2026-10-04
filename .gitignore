@@ -30,3 +30,7 @@ node_modules/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Reviews prepared for the owner to label hold review text; the model's labels go with them
+backend/eval/switching/to_label.csv
+backend/eval/switching/model_labels.json

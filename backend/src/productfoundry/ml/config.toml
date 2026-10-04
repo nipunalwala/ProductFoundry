@@ -20,3 +20,18 @@ representatives = 5       # sample reviews kept per cluster
 # mean vector removes that offset. A language with fewer reviews than this
 # shares the mean of all reviews instead, because its own mean would be noise.
 min_language_group = 10
+
+[trends]
+months = 12               # length of each series, ending at the month of the latest review
+window_months = 3         # growth = share over the last 3 months versus the 3 before
+min_month_reviews = 5     # a month with fewer reviews in total is marked, not plotted
+min_window_reviews = 15   # a window with fewer reviews in total gives no growth figure
+rising_threshold = 0.25   # a share that grew by more than a quarter is flagged as rising
+
+[switching]
+# A review is a candidate when it matches the keyword list or sits this close to one of
+# the seed sentences (cosine similarity after per-language centring). Chosen on the 191
+# stored Splitwise reviews: 14 keyword hits and 8 more by similarity, with no overlap.
+similarity = 0.3
+batch_size = 20           # candidates per LLM call
+max_candidates = 400      # per run; the most similar are kept when there are more

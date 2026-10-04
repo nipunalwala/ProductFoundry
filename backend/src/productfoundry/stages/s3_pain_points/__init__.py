@@ -11,14 +11,21 @@ from productfoundry.core.pain_points import (
     JunkCluster,
     PainPoint,
     PainPointReport,
+    TrendSettings,
     pain_point_score,
 )
 from productfoundry.core.reviews import Review, ReviewStore
 from productfoundry.core.run_input import RunInput
 from productfoundry.ml.config import MlConfig, load_config
 from productfoundry.ml.pipeline import cluster_run
+from productfoundry.ml.trends import monthly_totals, trend
 from productfoundry.orchestrator.protocols import Services
 from productfoundry.stages.s3_pain_points.labelling import label_cluster
+from productfoundry.stages.s3_pain_points.switching import (
+    classify,
+    find_candidates,
+    switching_table,
+)
 from productfoundry.stages.s3_pain_points.validation import check_report, language_counts
 
 
@@ -65,6 +72,15 @@ class PainPointStage:
         # Read after clustering, so the report is checked against what is stored now.
         _, reviews = run_reviews(competitors, services.reviews)
 
+        # Switching intent: candidates are picked without an LLM, then classified in batches.
+        embedded = services.reviews.with_embeddings(list(names), services.embedder.name)
+        candidates = find_candidates(embedded, services.embedder, config)
+        switching = classify(services.llm, candidates, names, config.switching.batch_size)
+        about_switching = {item.review_id for item in switching}
+
+        settings = TrendSettings(**config.trends.model_dump())
+        totals = monthly_totals(review.reviewed_at for review in reviews.values())
+
         points, junk = [], []
         for cluster in result.clusters:
             sample = [reviews[review_id] for review_id in cluster.representative_ids]
@@ -99,6 +115,16 @@ class PainPointStage:
                     "score": pain_point_score(
                         cluster.size, cluster.negative_share, answer.severity
                     ),
+                    "trend": trend(
+                        (reviews[review_id].reviewed_at for review_id in cluster.review_ids),
+                        totals,
+                        settings,
+                    ),
+                    "switching_review_ids": [
+                        review_id
+                        for review_id in cluster.review_ids
+                        if review_id in about_switching
+                    ],
                 }
             )
         points.sort(key=lambda p: (-p["score"], -p["review_count"], p["cluster_id"]))
@@ -110,8 +136,11 @@ class PainPointStage:
             language_counts=language_counts(list(reviews.values())),
             clustered_reviews=result.clustered_reviews,
             noise_reviews=len(result.noise_review_ids),
+            trend_settings=settings,
+            switching_reviews=switching,
+            switching_table=switching_table(switching, reviews, names),
         )
-        check_report(report, result.clusters, reviews)
+        check_report(report, result.clusters, reviews, names)
         return report
 
 

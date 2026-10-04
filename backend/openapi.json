@@ -512,6 +512,18 @@
             "minLength": 1,
             "title": "Severity Reason",
             "type": "string"
+          },
+          "switching_review_ids": {
+            "default": [],
+            "items": {
+              "pattern": "^rev_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "title": "Switching Review Ids",
+            "type": "array"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/Trend"
           }
         },
         "required": [
@@ -525,7 +537,8 @@
           "negative_share",
           "product_ids",
           "quote_review_ids",
-          "score"
+          "score",
+          "trend"
         ],
         "title": "PainPoint",
         "type": "object"
@@ -610,10 +623,29 @@
             "type": "string"
           },
           "schema_version": {
-            "const": 2,
-            "default": 2,
+            "const": 3,
+            "default": 3,
             "title": "Schema Version",
             "type": "integer"
+          },
+          "switching_reviews": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SwitchingReview"
+            },
+            "title": "Switching Reviews",
+            "type": "array"
+          },
+          "switching_table": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SwitchingRow"
+            },
+            "title": "Switching Table",
+            "type": "array"
+          },
+          "trend_settings": {
+            "$ref": "#/components/schemas/TrendSettings"
           }
         },
         "required": [
@@ -621,7 +653,8 @@
           "ranking_formula",
           "language_counts",
           "clustered_reviews",
-          "noise_reviews"
+          "noise_reviews",
+          "trend_settings"
         ],
         "title": "PainPointReport",
         "type": "object"
@@ -1414,6 +1447,123 @@
         "title": "StoreIds",
         "type": "object"
       },
+      "SwitchingIntent": {
+        "description": "What a review says about switching, seen from the product it reviews.",
+        "enum": [
+          "leaving",
+          "switched_to",
+          "switched_from",
+          "considering"
+        ],
+        "title": "SwitchingIntent",
+        "type": "string"
+      },
+      "SwitchingReview": {
+        "additionalProperties": false,
+        "properties": {
+          "intent": {
+            "$ref": "#/components/schemas/SwitchingIntent"
+          },
+          "other_product": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Other Product"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reason"
+          },
+          "review_id": {
+            "pattern": "^rev_[A-Za-z0-9]+$",
+            "title": "Review Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_id",
+          "intent"
+        ],
+        "title": "SwitchingReview",
+        "type": "object"
+      },
+      "SwitchingRow": {
+        "additionalProperties": false,
+        "description": "One line of the switching table: reviews that moved, or may move, the same way.",
+        "properties": {
+          "count": {
+            "exclusiveMinimum": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "from_product": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Product"
+          },
+          "reasons": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "review_ids": {
+            "items": {
+              "pattern": "^rev_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Review Ids",
+            "type": "array"
+          },
+          "to_product": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Product"
+          }
+        },
+        "required": [
+          "from_product",
+          "to_product",
+          "count",
+          "review_ids"
+        ],
+        "title": "SwitchingRow",
+        "type": "object"
+      },
       "Task": {
         "additionalProperties": false,
         "properties": {
@@ -1510,6 +1660,141 @@
           "epics"
         ],
         "title": "TaskPlan",
+        "type": "object"
+      },
+      "Trend": {
+        "additionalProperties": false,
+        "description": "The pain point's monthly share of all reviews, and whether it is growing.\n\nShares, not raw counts: a release that doubles the reviews doubles every count.",
+        "properties": {
+          "growth": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Growth"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "previous_share": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Previous Share"
+          },
+          "recent_share": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Recent Share"
+          },
+          "rising": {
+            "default": false,
+            "title": "Rising",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "months"
+        ],
+        "title": "Trend",
+        "type": "object"
+      },
+      "TrendPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "enough": {
+            "title": "Enough",
+            "type": "boolean"
+          },
+          "month": {
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+            "title": "Month",
+            "type": "string"
+          },
+          "reviews": {
+            "minimum": 0,
+            "title": "Reviews",
+            "type": "integer"
+          },
+          "total_reviews": {
+            "minimum": 0,
+            "title": "Total Reviews",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "month",
+          "reviews",
+          "total_reviews",
+          "enough"
+        ],
+        "title": "TrendPoint",
+        "type": "object"
+      },
+      "TrendSettings": {
+        "additionalProperties": false,
+        "description": "How trends were computed. Kept in the report so an edit recomputes them the same way.",
+        "properties": {
+          "min_month_reviews": {
+            "exclusiveMinimum": 0,
+            "title": "Min Month Reviews",
+            "type": "integer"
+          },
+          "min_window_reviews": {
+            "exclusiveMinimum": 0,
+            "title": "Min Window Reviews",
+            "type": "integer"
+          },
+          "months": {
+            "exclusiveMinimum": 0,
+            "title": "Months",
+            "type": "integer"
+          },
+          "rising_threshold": {
+            "exclusiveMinimum": 0,
+            "title": "Rising Threshold",
+            "type": "number"
+          },
+          "window_months": {
+            "exclusiveMinimum": 0,
+            "title": "Window Months",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "months",
+          "window_months",
+          "min_month_reviews",
+          "min_window_reviews",
+          "rising_threshold"
+        ],
+        "title": "TrendSettings",
         "type": "object"
       }
     }

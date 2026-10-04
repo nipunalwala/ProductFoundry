@@ -18,9 +18,21 @@ export type Quote = {
   rating: number | null;
 };
 
-export type ExportedPainPoint = Omit<Schemas["PainPoint"], "quote_review_ids" | "quote_glosses"> & {
+// A month's share is null when the month had too few reviews to say: a gap, not a zero.
+export type TrendMonth = Schemas["TrendPoint"] & { share: number | null };
+export type ExportedTrend = Omit<Schemas["Trend"], "months"> & { months: TrendMonth[] };
+
+// A review about switching products: the quote, and what the model read in it.
+export type SwitchingQuote = Quote & Omit<Schemas["SwitchingReview"], "review_id">;
+
+export type ExportedPainPoint = Omit<
+  Schemas["PainPoint"],
+  "quote_review_ids" | "quote_glosses" | "switching_review_ids" | "trend"
+> & {
   products: string[];
   quotes: Quote[];
+  trend: ExportedTrend;
+  switching: SwitchingQuote[];
 };
 
 export type ReportExport = {
@@ -31,7 +43,29 @@ export type ReportExport = {
   noise_reviews: number;
   pain_points: ExportedPainPoint[];
   junk_clusters: Schemas["JunkCluster"][];
+  trend_settings: Schemas["TrendSettings"];
+  switching_table: Schemas["SwitchingRow"][];
+  switching_review_count: number;
 };
+
+export const INTENT_NAMES: Record<string, string> = {
+  leaving: "Leaving",
+  switched_from: "Has left",
+  switched_to: "Came from another product",
+  considering: "Thinking of leaving",
+};
+
+/** One sentence on where a pain point is heading, or why that cannot be said. */
+export function trendSentence(trend: ExportedTrend, window: number): string {
+  if (trend.recent_share == null || trend.previous_share == null) {
+    return "Not enough reviews in the last months to say whether this is growing.";
+  }
+  const recent = Math.round(trend.recent_share * 100);
+  const previous = Math.round(trend.previous_share * 100);
+  const growth =
+    trend.growth == null ? "" : ` (${trend.growth > 0 ? "+" : ""}${Math.round(trend.growth * 100)}%)`;
+  return `${recent}% of all reviews in the last ${window} months, ${previous}% in the ${window} before${growth}.`;
+}
 
 export type Evidence =
   | {

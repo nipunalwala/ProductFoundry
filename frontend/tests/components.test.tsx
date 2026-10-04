@@ -144,7 +144,8 @@ describe("the pain-point checkpoint", () => {
   it("shows counts and quotes that open their source", () => {
     render(<PainPointCheckpoint report={REPORT} open={false} onApprove={vi.fn()} />);
     expect(screen.getByText(/44 reviews: 29 English, 14 Hinglish, 1 not analysed/)).toBeVisible();
-    const first = screen.getAllByRole("listitem")[0];
+    // The first pain-point card (the chart's legend is a list too).
+    const first = document.querySelector<HTMLElement>("ol.cards > li")!;
     expect(first).toHaveTextContent("1. Payments fail after money is debited");
     expect(first).toHaveTextContent("Severity 4/5 · 19 reviews · 75% negative");
     expect(first).toHaveTextContent("payment fail ho gaya lekin paisa kat gaya");

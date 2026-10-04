@@ -59,6 +59,7 @@ def export_report(
 
     A quote that does not resolve to a stored review is an error, never a gap.
     """
+    switching = {item.review_id: item for item in report.switching_reviews}
     points = []
     for point in report.pain_points:
         quotes = [
@@ -66,12 +67,24 @@ def export_report(
             for review_id in point.quote_review_ids
         ]
         points.append(
-            point.model_dump(mode="json", exclude={"quote_review_ids", "quote_glosses"})
+            point.model_dump(
+                mode="json", exclude={"quote_review_ids", "quote_glosses", "switching_review_ids"}
+            )
             | {
                 "products": [product_names.get(p, p) for p in point.product_ids],
                 "quotes": quotes,
+                # The pain point's reviews that talk about switching, each with what it says.
+                "switching": [
+                    resolve_quote(review_id, point, reviews, product_names)
+                    | switching[review_id].model_dump(mode="json", exclude={"review_id"})
+                    for review_id in point.switching_review_ids
+                ],
             }
         )
+        # The share is shown only for months with enough reviews to mean something.
+        for month in points[-1]["trend"]["months"]:
+            enough = month["enough"] and month["total_reviews"] > 0
+            month["share"] = month["reviews"] / month["total_reviews"] if enough else None
     return {
         "title": title,
         "schema_version": report.schema_version,
@@ -80,6 +93,9 @@ def export_report(
         "clustered_reviews": report.clustered_reviews,
         "noise_reviews": report.noise_reviews,
         "pain_points": points,
+        "trend_settings": report.trend_settings.model_dump(),
+        "switching_table": [row.model_dump(mode="json") for row in report.switching_table],
+        "switching_review_count": len(report.switching_reviews),
         "junk_clusters": [junk.model_dump() for junk in report.junk_clusters],
     }
 
@@ -99,6 +115,20 @@ def quote_lines(quote: Mapping[str, Any]) -> list[str]:
     if quote["translation"]:
         lines += [">", f"> *Translation: {_plain(quote['translation'])}*"]
     return [*lines, ">", f"> {quote['product']}, {where}{stars} · `{quote['review_id']}`"]
+
+
+def trend_line(trend: Mapping[str, Any], window: int) -> str:
+    """One sentence on where a pain point is heading, or why that cannot be said."""
+    recent, previous = trend["recent_share"], trend["previous_share"]
+    if recent is None or previous is None:
+        return "Trend: not enough reviews in the last months to say."
+    change = "rising" if trend["rising"] else "not rising"
+    shares = (
+        f"{recent:.0%} of all reviews in the last {window} months, "
+        f"{previous:.0%} in the {window} before"
+    )
+    growth = "" if trend["growth"] is None else f" ({trend['growth']:+.0%})"
+    return f"Trend: {change}. {shares}{growth}."
 
 
 def render_markdown(export: Mapping[str, Any]) -> str:
@@ -132,11 +162,30 @@ def render_markdown(export: Mapping[str, Any]) -> str:
             f"- Why this severity: {point['severity_reason']}",
             f"- Products: {', '.join(point['products'])}",
             f"- Cluster: {clusters}" + (" (merged at the checkpoint)" if merged else ""),
+            f"- {trend_line(point['trend'], export['trend_settings']['window_months'])}",
+            f"- Reviews about switching products: {len(point['switching'])}",
             "",
             "Quotes:",
         ]
         for quote in point["quotes"]:
             lines += ["", *quote_lines(quote)]
+    if export["switching_table"]:
+        lines += [
+            "",
+            "## Switching",
+            "",
+            f"{export['switching_review_count']} reviews talk about switching products. "
+            "Reasons are the model's short summaries of what the reviews say.",
+            "",
+            "| From | To | Reviews | Top reasons |",
+            "|---|---|---|---|",
+        ]
+        lines += [
+            f"| {_plain(row['from_product'] or 'not said')} | "
+            f"{_plain(row['to_product'] or 'not said')} | {row['count']} | "
+            f"{_plain('; '.join(row['reasons']) or 'none given')} |"
+            for row in export["switching_table"]
+        ]
     if export["junk_clusters"]:
         lines += ["", "## Groups that are not a pain point", ""]
         lines += [

@@ -5,9 +5,11 @@ import { useState } from "react";
 import type { Approve } from "@/lib/api";
 import { NO_CHANGES, painPointApproval, painPointProblem } from "@/lib/edits";
 import type { PainPointChanges } from "@/lib/edits";
+import { INTENT_NAMES, trendSentence } from "@/lib/exports";
 import type { ReportExport } from "@/lib/exports";
 
 import { QuoteBlock } from "./QuoteBlock";
+import { TrendChart } from "./TrendChart";
 
 /** The ranked pain points with counts and quotes. While the checkpoint is open the user can
  * rename, merge and drop, then approve. */
@@ -23,6 +25,7 @@ export function PainPointCheckpoint({
   const [changes, setChanges] = useState<PainPointChanges>(NO_CHANGES);
   const [problem, setProblem] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [switchingOnly, setSwitchingOnly] = useState<string[]>([]);
   const counts = report.language_counts;
   const labels = Object.fromEntries(report.pain_points.map((p) => [p.cluster_id, p.label]));
 
@@ -46,6 +49,12 @@ export function PainPointCheckpoint({
       else delete next[cluster];
       return { ...c, mergeInto: next };
     });
+  }
+
+  function toggleSwitching(cluster: string) {
+    setSwitchingOnly((clusters) =>
+      clusters.includes(cluster) ? clusters.filter((c) => c !== cluster) : [...clusters, cluster],
+    );
   }
 
   async function approve() {
@@ -79,9 +88,12 @@ export function PainPointCheckpoint({
         <p>No pain points: there were not enough negative reviews to form a theme.</p>
       ) : null}
 
+      {report.pain_points.length > 0 ? <TrendChart points={report.pain_points} /> : null}
+
       <ol className="cards">
         {report.pain_points.map((point) => {
           const dropped = changes.dropped.includes(point.cluster_id);
+          const onlySwitching = switchingOnly.includes(point.cluster_id);
           const target = changes.mergeInto[point.cluster_id] ?? "";
           const others = report.pain_points.filter((p) => p.cluster_id !== point.cluster_id);
           return (
@@ -97,12 +109,41 @@ export function PainPointCheckpoint({
               <p>{point.description}</p>
               <p className="muted">Why this severity: {point.severity_reason}</p>
               <p className="muted">Products: {point.products.join(", ")}</p>
-              <details>
-                <summary>{point.quotes.length} quotes</summary>
-                {point.quotes.map((quote) => (
-                  <QuoteBlock key={quote.review_id} quote={quote} />
-                ))}
-              </details>
+              <p className="muted">
+                Trend{point.trend.rising ? <span className="tag">rising</span> : null}:{" "}
+                {trendSentence(point.trend, report.trend_settings.window_months)}
+              </p>
+              <label className="inline">
+                <input
+                  type="checkbox"
+                  checked={onlySwitching}
+                  disabled={point.switching.length === 0}
+                  onChange={() => toggleSwitching(point.cluster_id)}
+                />
+                Only reviews about switching, for pain point {point.rank} ({point.switching.length})
+              </label>
+              {onlySwitching ? (
+                <details open>
+                  <summary>{point.switching.length} reviews about switching</summary>
+                  {point.switching.map((quote) => (
+                    <div key={quote.review_id}>
+                      <p className="facts">
+                        <span className="tag">{INTENT_NAMES[quote.intent] ?? quote.intent}</span>
+                        {quote.other_product ? ` Other product: ${quote.other_product}.` : ""}
+                        {quote.reason ? ` Reason: ${quote.reason}.` : ""}
+                      </p>
+                      <QuoteBlock quote={quote} />
+                    </div>
+                  ))}
+                </details>
+              ) : (
+                <details>
+                  <summary>{point.quotes.length} quotes</summary>
+                  {point.quotes.map((quote) => (
+                    <QuoteBlock key={quote.review_id} quote={quote} />
+                  ))}
+                </details>
+              )}
               {open ? (
                 <div className="edits">
                   <label>
@@ -140,6 +181,38 @@ export function PainPointCheckpoint({
           );
         })}
       </ol>
+
+      {report.switching_table.length > 0 ? (
+        <>
+          <h3>Switching</h3>
+          <p className="muted">
+            {report.switching_review_count} reviews talk about switching products. Reasons are
+            short summaries written by the model.
+          </p>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">From</th>
+                  <th scope="col">To</th>
+                  <th scope="col">Reviews</th>
+                  <th scope="col">Top reasons</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.switching_table.map((row) => (
+                  <tr key={`${row.from_product}-${row.to_product}`}>
+                    <td>{row.from_product ?? "not said"}</td>
+                    <td>{row.to_product ?? "not said"}</td>
+                    <td>{row.count}</td>
+                    <td>{row.reasons.join("; ") || "none given"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
 
       {report.junk_clusters.length > 0 ? (
         <details>

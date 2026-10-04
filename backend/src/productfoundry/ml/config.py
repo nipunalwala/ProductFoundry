@@ -27,9 +27,25 @@ class ClusteringConfig(_Config):
     min_language_group: PositiveInt
 
 
+class TrendConfig(_Config):
+    months: PositiveInt
+    window_months: PositiveInt
+    min_month_reviews: PositiveInt
+    min_window_reviews: PositiveInt
+    rising_threshold: float = Field(gt=0)
+
+
+class SwitchingConfig(_Config):
+    similarity: float = Field(gt=-1, lt=1)
+    batch_size: PositiveInt
+    max_candidates: PositiveInt
+
+
 class MlConfig(_Config):
     embeddings: EmbeddingConfig
     clustering: ClusteringConfig
+    trends: TrendConfig
+    switching: SwitchingConfig
 
 
 def load_config(path: Path = CONFIG_FILE) -> MlConfig:
