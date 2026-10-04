@@ -103,7 +103,7 @@ where the table says so.
 | Phase | Title | Status |
 |---|---|---|
 | 0 | Toolchain and first green build | Done 2026-10-04. Lint and 1 test pass; `productfoundry --version` prints 0.1.0; the database container starts healthy and `CREATE EXTENSION vector` succeeds (pgvector 0.8.7 on PostgreSQL 17). uv is run as `py -m uv` because pip installed it outside PATH. The database is on host port 5433 because a native PostgreSQL already uses 5432 on this machine |
-| 1 | Schemas and the run state machine | Not started |
+| 1 | Schemas and the run state machine | Done 2026-10-04. Lint and 96 tests pass. All four schemas are v1. `approve` only records the approval; `resume` continues the run (the CLI does both). A stage that raises `QuotaExhausted` goes back to `pending`, so `resume` retries it. The CLI keeps runs in `.productfoundry/runs.json` (`--state-file`), a JSON dump of the in-memory store, so `status`, `approve` and `resume` work across commands until phase 2. `RunStore` contract tests are in `tests/test_run_store.py`, parametrised by store: phase 2 adds Postgres to the `store` fixture. `CompetitorList` already has `rejected` (needed in phase 4) and `ReviewSourceName` already lists Reddit and Product Hunt, to avoid a version bump later |
 | 2 | Storage | Not started |
 | 3 | LLM gateway | Not started |
 | 4 | Stage 1: competitor research | Not started |

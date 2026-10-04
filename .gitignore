@@ -13,6 +13,9 @@ __pycache__/
 dist/
 build/
 
+# Local run state (CLI)
+.productfoundry/
+
 # Model and data caches
 .cache/
 models/

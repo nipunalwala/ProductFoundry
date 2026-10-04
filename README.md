@@ -24,6 +24,18 @@ py -m uv sync
 py -m uv run productfoundry --version
 ```
 
+## Use
+
+From `backend/`. Stages are stand-ins until their phases are built.
+
+```
+py -m uv run productfoundry run --input input.json   # stops at the first checkpoint
+py -m uv run productfoundry status [RUN_ID] [--output STAGE]
+py -m uv run productfoundry approve RUN_ID [--edit edited.json]
+py -m uv run productfoundry resume RUN_ID [--from-stage STAGE]
+py -m uv run productfoundry schema [NAME] [--out DIR]  # JSON Schema of the contracts
+```
+
 ## Test
 
 From `backend/`:
