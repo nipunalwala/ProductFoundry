@@ -83,7 +83,8 @@ backend/
   tests/
     fixtures/        recorded source and LLM responses
   eval/              evaluation harness and hand-labelled sets
-frontend/            Next.js app
+frontend/            Next.js app. Calls the API through its own /api proxy; types are
+                     generated from backend/openapi.json
 docker-compose.yml   postgres (pgvector), redis, worker
 docs/
 ```

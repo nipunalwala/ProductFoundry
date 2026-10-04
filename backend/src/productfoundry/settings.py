@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://127.0.0.1:6380/0"
     # The worker and the API run every stage as a stand-in: no search, store or LLM request.
     fake_stages: bool = False
+    # Reviews the worker fetches per product per store in one run.
+    review_cap: int = 2000
 
     def sqlalchemy_url(self) -> URL:
         if self.database_url:

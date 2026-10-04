@@ -77,6 +77,21 @@ approves and reads runs; the worker runs the stages. Set `FAKE_STAGES=true` for
 both to try the flow with stand-in stages and no outside request. Redis listens
 on `127.0.0.1:6380`.
 
+## Frontend
+
+Needs Node 20. With the API and the worker running:
+
+```
+cd frontend
+npm install
+npm run dev          # http://localhost:3000
+```
+
+The browser calls `/api`, which the frontend forwards to the backend at
+`BACKEND_URL` (default `http://127.0.0.1:8000`). `npm run gen:api` regenerates the
+API types from `backend/openapi.json`; `npm test`, `npm run lint` and
+`npm run build` check the app.
+
 ## Test
 
 From `backend/`:

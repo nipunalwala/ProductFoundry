@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Request, Response
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from productfoundry import __version__, runtime
@@ -28,6 +29,7 @@ from productfoundry.core.errors import (
     RunNotFound,
     StageOutputInvalid,
 )
+from productfoundry.core.registry import SCHEMAS
 from productfoundry.core.reviews import ReviewStore
 from productfoundry.jobs import JobQueue
 from productfoundry.orchestrator import Orchestrator, RunStatus, RunStore
@@ -72,6 +74,27 @@ def _real_backend() -> tuple[Backend, object]:
     return backend, engine
 
 
+def _openapi(app: FastAPI) -> dict:
+    """The generated schema, plus the stage outputs.
+
+    A stage output travels as plain JSON (`StageOutputView.output`), so its shape
+    would be missing from the schema. The frontend generates its types from this
+    file, so each output contract is added by name.
+    """
+    if app.openapi_schema is None:
+        schema = get_openapi(
+            title=app.title, version=app.version, description=app.description, routes=app.routes
+        )
+        schemas = schema.setdefault("components", {}).setdefault("schemas", {})
+        template = "#/components/schemas/{model}"
+        for name, model in SCHEMAS.items():
+            definition = model.model_json_schema(ref_template=template)
+            schemas.update(definition.pop("$defs", {}))
+            schemas[name] = definition
+        app.openapi_schema = schema
+    return app.openapi_schema
+
+
 def create_app(backend: Backend | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> Iterator[None]:
@@ -91,6 +114,7 @@ def create_app(backend: Backend | None = None) -> FastAPI:
     )
 
     app.state.backend = backend
+    app.openapi = lambda: _openapi(app)
 
     @app.exception_handler(ProductFoundryError)
     async def report_error(request: Request, exc: ProductFoundryError) -> JSONResponse:

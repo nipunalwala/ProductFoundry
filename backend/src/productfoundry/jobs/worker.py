@@ -31,7 +31,10 @@ def advance_run(run_id: str, from_stage: str | None = None) -> str:
         storage.check_ready(engine)
         sessions = storage.make_sessions(engine)
         orchestrator = runtime.build_orchestrator(
-            storage.PostgresRunStore(sessions), sessions, fake_stages=settings.fake_stages
+            storage.PostgresRunStore(sessions),
+            sessions,
+            fake_stages=settings.fake_stages,
+            review_cap=settings.review_cap,
         )
         try:
             run = orchestrator.resume(run_id, from_stage=from_stage)

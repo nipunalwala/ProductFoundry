@@ -1,6 +1,30 @@
 {
   "components": {
     "schemas": {
+      "AcceptanceCriteria": {
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskCriteria"
+            },
+            "minItems": 1,
+            "title": "Tasks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tasks"
+        ],
+        "title": "AcceptanceCriteria",
+        "type": "object"
+      },
       "Approve": {
         "additionalProperties": false,
         "description": "Approve the checkpoint as it is, with a whole edited output, or with edits.",
@@ -41,6 +65,63 @@
         "title": "Approve",
         "type": "object"
       },
+      "Competitor": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^prod_[A-Za-z0-9]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_incumbent": {
+            "default": false,
+            "title": "Is Incumbent",
+            "type": "boolean"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "positioning": {
+            "minLength": 1,
+            "title": "Positioning",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "store_ids": {
+            "$ref": "#/components/schemas/StoreIds",
+            "default": {
+              "app_store": null,
+              "google_play": null
+            }
+          },
+          "target_users": {
+            "minLength": 1,
+            "title": "Target Users",
+            "type": "string"
+          },
+          "url": {
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "url",
+          "positioning",
+          "target_users",
+          "reason"
+        ],
+        "title": "Competitor",
+        "type": "object"
+      },
       "CompetitorEdits": {
         "additionalProperties": false,
         "properties": {
@@ -65,6 +146,38 @@
         "title": "CompetitorEdits",
         "type": "object"
       },
+      "CompetitorList": {
+        "additionalProperties": false,
+        "properties": {
+          "competitors": {
+            "items": {
+              "$ref": "#/components/schemas/Competitor"
+            },
+            "minItems": 1,
+            "title": "Competitors",
+            "type": "array"
+          },
+          "rejected": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RejectedCandidate"
+            },
+            "title": "Rejected",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "competitors"
+        ],
+        "title": "CompetitorList",
+        "type": "object"
+      },
       "CreateRun": {
         "additionalProperties": false,
         "properties": {
@@ -81,6 +194,94 @@
           "input"
         ],
         "title": "CreateRun",
+        "type": "object"
+      },
+      "Criterion": {
+        "additionalProperties": false,
+        "properties": {
+          "given": {
+            "minLength": 1,
+            "title": "Given",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CriterionKind"
+          },
+          "then": {
+            "minLength": 1,
+            "title": "Then",
+            "type": "string"
+          },
+          "when": {
+            "minLength": 1,
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "given",
+          "when",
+          "then"
+        ],
+        "title": "Criterion",
+        "type": "object"
+      },
+      "CriterionKind": {
+        "enum": [
+          "happy_path",
+          "edge_case",
+          "failure_state"
+        ],
+        "title": "CriterionKind",
+        "type": "string"
+      },
+      "Effort": {
+        "description": "A fixed scale for one developer. Anything larger than XL is split into tasks.",
+        "enum": [
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL"
+        ],
+        "title": "Effort",
+        "type": "string"
+      },
+      "Epic": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^epic_[A-Za-z0-9]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            },
+            "minItems": 1,
+            "title": "Tasks",
+            "type": "array"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "tasks"
+        ],
+        "title": "Epic",
         "type": "object"
       },
       "Health": {
@@ -105,7 +306,10 @@
           },
           "store_ids": {
             "$ref": "#/components/schemas/StoreIds",
-            "default": {}
+            "default": {
+              "app_store": null,
+              "google_play": null
+            }
           },
           "urls": {
             "default": [],
@@ -123,6 +327,94 @@
         "title": "Incumbent",
         "type": "object"
       },
+      "JunkCluster": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "pattern": "^cl_[A-Za-z0-9]+$",
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "review_count": {
+            "exclusiveMinimum": 0,
+            "title": "Review Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "review_count",
+          "reason"
+        ],
+        "title": "JunkCluster",
+        "type": "object"
+      },
+      "LanguageCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "english": {
+            "minimum": 0,
+            "title": "English",
+            "type": "integer"
+          },
+          "hinglish": {
+            "minimum": 0,
+            "title": "Hinglish",
+            "type": "integer"
+          },
+          "not_analysed": {
+            "minimum": 0,
+            "title": "Not Analysed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "english",
+          "hinglish",
+          "not_analysed"
+        ],
+        "title": "LanguageCounts",
+        "type": "object"
+      },
+      "MarketGap": {
+        "additionalProperties": false,
+        "description": "A fact about a competitor that a requirement can cite.\n\nUntil the market panel exists (phase 21), the only such fact is what stage 1\nrecorded about the competitor.",
+        "properties": {
+          "fact": {
+            "minLength": 1,
+            "title": "Fact",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^gap_[A-Za-z0-9]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "product_id": {
+            "pattern": "^prod_[A-Za-z0-9]+$",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "product_name": {
+            "minLength": 1,
+            "title": "Product Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product_id",
+          "product_name",
+          "fact"
+        ],
+        "title": "MarketGap",
+        "type": "object"
+      },
       "Mode": {
         "enum": [
           "new_idea",
@@ -131,6 +423,112 @@
         ],
         "title": "Mode",
         "type": "string"
+      },
+      "PainPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "pattern": "^cl_[A-Za-z0-9]+$",
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "description": {
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "merged_cluster_ids": {
+            "default": [],
+            "items": {
+              "pattern": "^cl_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "title": "Merged Cluster Ids",
+            "type": "array"
+          },
+          "negative_share": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Negative Share",
+            "type": "number"
+          },
+          "product_ids": {
+            "items": {
+              "pattern": "^prod_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Product Ids",
+            "type": "array"
+          },
+          "quote_glosses": {
+            "default": {},
+            "patternProperties": {
+              "^rev_[A-Za-z0-9]+$": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "title": "Quote Glosses",
+            "type": "object"
+          },
+          "quote_review_ids": {
+            "items": {
+              "pattern": "^rev_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 3,
+            "title": "Quote Review Ids",
+            "type": "array"
+          },
+          "rank": {
+            "exclusiveMinimum": 0,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "review_count": {
+            "exclusiveMinimum": 0,
+            "title": "Review Count",
+            "type": "integer"
+          },
+          "score": {
+            "minimum": 0,
+            "title": "Score",
+            "type": "number"
+          },
+          "severity": {
+            "maximum": 5,
+            "minimum": 1,
+            "title": "Severity",
+            "type": "integer"
+          },
+          "severity_reason": {
+            "minLength": 1,
+            "title": "Severity Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "rank",
+          "label",
+          "description",
+          "severity",
+          "severity_reason",
+          "review_count",
+          "negative_share",
+          "product_ids",
+          "quote_review_ids",
+          "score"
+        ],
+        "title": "PainPoint",
+        "type": "object"
       },
       "PainPointEdits": {
         "additionalProperties": false,
@@ -175,6 +573,59 @@
         "title": "PainPointEdits",
         "type": "object"
       },
+      "PainPointReport": {
+        "additionalProperties": false,
+        "properties": {
+          "clustered_reviews": {
+            "minimum": 0,
+            "title": "Clustered Reviews",
+            "type": "integer"
+          },
+          "junk_clusters": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/JunkCluster"
+            },
+            "title": "Junk Clusters",
+            "type": "array"
+          },
+          "language_counts": {
+            "$ref": "#/components/schemas/LanguageCounts"
+          },
+          "noise_reviews": {
+            "minimum": 0,
+            "title": "Noise Reviews",
+            "type": "integer"
+          },
+          "pain_points": {
+            "items": {
+              "$ref": "#/components/schemas/PainPoint"
+            },
+            "title": "Pain Points",
+            "type": "array"
+          },
+          "ranking_formula": {
+            "minLength": 1,
+            "title": "Ranking Formula",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pain_points",
+          "ranking_formula",
+          "language_counts",
+          "clustered_reviews",
+          "noise_reviews"
+        ],
+        "title": "PainPointReport",
+        "type": "object"
+      },
       "Platform": {
         "enum": [
           "android",
@@ -182,6 +633,88 @@
           "web"
         ],
         "title": "Platform",
+        "type": "string"
+      },
+      "Prd": {
+        "additionalProperties": false,
+        "properties": {
+          "goals": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Goals",
+            "type": "array"
+          },
+          "market_gaps": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MarketGap"
+            },
+            "title": "Market Gaps",
+            "type": "array"
+          },
+          "non_goals": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Non Goals",
+            "type": "array"
+          },
+          "problem": {
+            "minLength": 1,
+            "title": "Problem",
+            "type": "string"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/Requirement"
+            },
+            "minItems": 1,
+            "title": "Requirements",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "success_metrics": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Success Metrics",
+            "type": "array"
+          },
+          "users": {
+            "minLength": 1,
+            "title": "Users",
+            "type": "string"
+          }
+        },
+        "required": [
+          "problem",
+          "users",
+          "goals",
+          "requirements",
+          "success_metrics"
+        ],
+        "title": "Prd",
+        "type": "object"
+      },
+      "Priority": {
+        "enum": [
+          "must",
+          "should",
+          "could"
+        ],
+        "title": "Priority",
         "type": "string"
       },
       "Problem": {
@@ -195,6 +728,137 @@
           "detail"
         ],
         "title": "Problem",
+        "type": "object"
+      },
+      "ProductReviewCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "by_language": {
+            "patternProperties": {
+              "^(hinglish|[a-z]{2,3})$": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "title": "By Language",
+            "type": "object"
+          },
+          "by_sentiment": {
+            "additionalProperties": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Sentiment"
+            },
+            "title": "By Sentiment",
+            "type": "object"
+          },
+          "by_source": {
+            "additionalProperties": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/ReviewSourceName"
+            },
+            "title": "By Source",
+            "type": "object"
+          },
+          "not_analysed": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Not Analysed",
+            "type": "integer"
+          },
+          "product_id": {
+            "pattern": "^prod_[A-Za-z0-9]+$",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "total": {
+            "minimum": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_id",
+          "total",
+          "by_source",
+          "by_language",
+          "by_sentiment"
+        ],
+        "title": "ProductReviewCounts",
+        "type": "object"
+      },
+      "RejectedCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Url"
+          }
+        },
+        "required": [
+          "name",
+          "reason"
+        ],
+        "title": "RejectedCandidate",
+        "type": "object"
+      },
+      "Requirement": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {
+            "items": {
+              "pattern": "^(cl|gap)_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^req_[A-Za-z0-9]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "statement": {
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "priority",
+          "evidence"
+        ],
+        "title": "Requirement",
         "type": "object"
       },
       "Resume": {
@@ -215,6 +879,113 @@
         "title": "Resume",
         "type": "object"
       },
+      "ReviewSet": {
+        "additionalProperties": false,
+        "properties": {
+          "dropped": {
+            "additionalProperties": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "default": {},
+            "propertyNames": {
+              "minLength": 1
+            },
+            "title": "Dropped",
+            "type": "object"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductReviewCounts"
+            },
+            "minItems": 1,
+            "title": "Products",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "products"
+        ],
+        "title": "ReviewSet",
+        "type": "object"
+      },
+      "ReviewSourceName": {
+        "enum": [
+          "google_play",
+          "app_store",
+          "reddit",
+          "product_hunt"
+        ],
+        "title": "ReviewSourceName",
+        "type": "string"
+      },
+      "Roadmap": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RoadmapItem"
+            },
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "ordering": {
+            "const": "prd_order",
+            "default": "prd_order",
+            "title": "Ordering",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Roadmap",
+        "type": "object"
+      },
+      "RoadmapItem": {
+        "additionalProperties": false,
+        "properties": {
+          "rank": {
+            "exclusiveMinimum": 0,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "requirement_id": {
+            "pattern": "^req_[A-Za-z0-9]+$",
+            "title": "Requirement Id",
+            "type": "string"
+          },
+          "task_ids": {
+            "items": {
+              "pattern": "^task_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Task Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rank",
+          "requirement_id",
+          "task_ids"
+        ],
+        "title": "RoadmapItem",
+        "type": "object"
+      },
       "RunInput": {
         "additionalProperties": false,
         "properties": {
@@ -231,7 +1002,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "default": null
           },
           "known_competitors": {
             "default": [],
@@ -420,6 +1192,16 @@
         ],
         "title": "RunView",
         "type": "object"
+      },
+      "Sentiment": {
+        "enum": [
+          "positive",
+          "neutral",
+          "mixed",
+          "negative"
+        ],
+        "title": "Sentiment",
+        "type": "string"
       },
       "StageOutputView": {
         "properties": {
@@ -612,6 +1394,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "App Store"
           },
           "google_play": {
@@ -624,10 +1407,109 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Google Play"
           }
         },
         "title": "StoreIds",
+        "type": "object"
+      },
+      "Task": {
+        "additionalProperties": false,
+        "properties": {
+          "depends_on": {
+            "default": [],
+            "items": {
+              "pattern": "^task_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "title": "Depends On",
+            "type": "array"
+          },
+          "description": {
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "effort": {
+            "$ref": "#/components/schemas/Effort"
+          },
+          "id": {
+            "pattern": "^task_[A-Za-z0-9]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "requirement_ids": {
+            "items": {
+              "pattern": "^req_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Requirement Ids",
+            "type": "array"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "requirement_ids",
+          "effort"
+        ],
+        "title": "Task",
+        "type": "object"
+      },
+      "TaskCriteria": {
+        "additionalProperties": false,
+        "properties": {
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/Criterion"
+            },
+            "minItems": 2,
+            "title": "Criteria",
+            "type": "array"
+          },
+          "task_id": {
+            "pattern": "^task_[A-Za-z0-9]+$",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "criteria"
+        ],
+        "title": "TaskCriteria",
+        "type": "object"
+      },
+      "TaskPlan": {
+        "additionalProperties": false,
+        "properties": {
+          "epics": {
+            "items": {
+              "$ref": "#/components/schemas/Epic"
+            },
+            "minItems": 1,
+            "title": "Epics",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epics"
+        ],
+        "title": "TaskPlan",
         "type": "object"
       }
     }

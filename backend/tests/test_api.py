@@ -355,7 +355,12 @@ def test_the_committed_openapi_schema_is_current():
     assert committed.read_text(encoding="utf-8") == openapi_text(), (
         "run `py -m uv run productfoundry openapi --out openapi.json` and commit the result"
     )
-    paths = json.loads(committed.read_text(encoding="utf-8"))["paths"]
+    schema = json.loads(committed.read_text(encoding="utf-8"))
+    # Stage outputs travel as plain JSON, so their contracts are added for the frontend's types.
+    for name in ("CompetitorList", "PainPointReport", "Prd", "TaskPlan", "AcceptanceCriteria"):
+        assert name in schema["components"]["schemas"]
+    assert "$defs" not in json.dumps(schema)
+    paths = schema["paths"]
     assert sorted(paths) == [
         "/health",
         "/runs",

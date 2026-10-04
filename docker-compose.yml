@@ -36,6 +36,9 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-productfoundry}:${POSTGRES_PASSWORD:-productfoundry}@db:5432/${POSTGRES_DB:-productfoundry}
       REDIS_URL: redis://redis:6379/0
       FAKE_STAGES: ${FAKE_STAGES:-false}
+      REVIEW_CAP: ${REVIEW_CAP:-2000}
+      # Model downloads through the Xet backend stalled on the development network.
+      HF_HUB_DISABLE_XET: "1"
     volumes:
       - model-cache:/root/.cache/huggingface
     depends_on:
