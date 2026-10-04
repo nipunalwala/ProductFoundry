@@ -1,0 +1,28 @@
+{
+  "_note": "Hand-written: the answer a provider returns for the three invented Tabby releases of tests/test_changelog.py (sent newest first). CLUSTER_PAYMENTS stands for the cluster id of the payments pain point, which the test fills in.",
+  "answer": {
+    "matches": [
+      {
+        "n": 1,
+        "kind": "feature",
+        "cluster_ids": [],
+        "requirement_ids": [],
+        "reason": "Group budgets are new and none of the requirements plans them."
+      },
+      {
+        "n": 2,
+        "kind": "fix",
+        "cluster_ids": ["CLUSTER_PAYMENTS"],
+        "requirement_ids": ["req_001"],
+        "reason": "The notes say the daily limit on payments is removed."
+      },
+      {
+        "n": 3,
+        "kind": "other",
+        "cluster_ids": [],
+        "requirement_ids": [],
+        "reason": "The notes name no specific change."
+      }
+    ]
+  }
+}

@@ -291,3 +291,78 @@ def pricing_refresh(sessions):
         store=storage.PricingRepository(sessions),
         alerts=storage.PricingAlertRepository(sessions),
     )
+
+
+def changelog_adapters(settings=None) -> dict:
+    """The real release sources, by kind."""
+    from productfoundry.settings import Settings
+    from productfoundry.sources.changelog import (
+        AppStoreNotes,
+        FeedReleases,
+        GitHubReleases,
+        GooglePlayNotes,
+        PageReleases,
+    )
+    from productfoundry.sources.pricing import PlaywrightFetcher
+    from productfoundry.sources.robots import Robots
+
+    settings = settings or Settings()
+    robots = Robots()
+    return {
+        "github": GitHubReleases(),
+        "feed": FeedReleases(robots),
+        "page": PageReleases(PlaywrightFetcher(settings.pricing_browser_channel), robots),
+        "app_store": AppStoreNotes(),
+        "google_play": GooglePlayNotes(robots),
+    }
+
+
+def changelog_collect(sessions):
+    """Read every tracked release source and store what is new."""
+    from productfoundry import storage
+    from productfoundry.market.changelog import collect
+
+    return collect(changelog_adapters(), storage.ChangelogRepository(sessions))
+
+
+def run_plan(run: RunRecord):
+    """The run's competitors, approved pain points and PRD, which changelog matching needs."""
+    from productfoundry.core.competitors import CompetitorList
+    from productfoundry.core.pain_points import PainPointReport
+    from productfoundry.core.prd import Prd
+
+    competitors = CompetitorList.model_validate(
+        stage_output(run, "s1_competitors", "competitor list")
+    )
+    try:
+        report = PainPointReport.model_validate(
+            stage_output(run, "s3_pain_points", "pain-point report")
+        )
+    except ValidationError:
+        raise ProductFoundryError(
+            f"run {run.id} has a pain-point report in an older format; "
+            f"re-run it with `resume {run.id} --from-stage s3_pain_points`"
+        ) from None
+    prd = Prd.model_validate(stage_output(run, "s4_prd", "PRD"))
+    return competitors, report, prd
+
+
+def changelog_match(sessions, run: RunRecord, *, again: bool = False):
+    """Match the run's unseen release items through the gateway. Returns the new matches."""
+    from productfoundry import storage
+    from productfoundry.market.changelog import match_run
+    from productfoundry.settings import Settings
+
+    competitors, report, prd = run_plan(run)
+    store = storage.ChangelogRepository(sessions)
+    if again:
+        store.clear_matches(run.id)
+    llm = live_gateway(sessions, Settings()).for_run(run.id)
+    return match_run(run.id, competitors, report, prd, llm=llm, store=store)
+
+
+def changelog_alerts(run: RunRecord, store):
+    from productfoundry.market.changelog import run_alerts
+
+    competitors, report, prd = run_plan(run)
+    return run_alerts(run.id, competitors, report, prd, store)

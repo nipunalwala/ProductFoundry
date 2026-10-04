@@ -177,3 +177,43 @@ class PricingAlertRow(Base):
     url: Mapped[str]
     detected_at: Mapped[datetime] = mapped_column(index=True)
     alert: Mapped[dict[str, Any]]
+
+
+class ChangelogSourceRow(Base):
+    """Where a product's releases are read from every week."""
+
+    __tablename__ = "changelog_sources"
+
+    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"), primary_key=True)
+    kind: Mapped[str] = mapped_column(primary_key=True)
+    target: Mapped[str] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class ChangelogItemRow(Base):
+    """One thing a product shipped. There is no column for an author."""
+
+    __tablename__ = "changelog_items"
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"), index=True)
+    source: Mapped[str]
+    title: Mapped[str]
+    body: Mapped[str]
+    version: Mapped[str | None]
+    released_at: Mapped[datetime | None] = mapped_column(index=True)
+    url: Mapped[str | None]
+    fetched_at: Mapped[datetime]
+
+
+class ChangelogMatchRow(Base):
+    """What a release item means for a run: the clusters and requirements it touches."""
+
+    __tablename__ = "changelog_matches"
+
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id", ondelete="CASCADE"), primary_key=True)
+    item_id: Mapped[str] = mapped_column(
+        ForeignKey("changelog_items.id", ondelete="CASCADE"), primary_key=True
+    )
+    match: Mapped[dict[str, Any]]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())

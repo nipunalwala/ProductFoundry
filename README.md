@@ -105,6 +105,23 @@ Monday at 03:00 UTC, and `refresh` does the same on demand. An unchanged page
 costs no LLM call. A change in a price, a plan or a limit is stored as an alert,
 shown by `pricing alerts` and by `GET /pricing/alerts`.
 
+### Changelog tracking
+
+```
+py -m uv run productfoundry changelog track --product NAME [--run RUN_ID] \
+    [--github OWNER/REPO] [--feed URL] [--page URL] [--app-store ID] [--google-play ID]
+py -m uv run productfoundry changelog fetch            # read every tracked source
+py -m uv run productfoundry changelog match RUN_ID     # match unseen items to the run (LLM calls)
+py -m uv run productfoundry changelog alerts RUN_ID [--format json]
+```
+
+`track` names where a product publishes what it ships; the worker reads every
+tracked source each Monday with the pricing pages, and `fetch` does it on
+demand. `match` compares the release items of a run's products with the run's
+pain points and PRD, and prints two kinds of alert: a competitor shipped a fix
+for a pain point the run targets, or shipped a feature the PRD does not cover.
+`GET /runs/{id}/changelog` returns the same alerts.
+
 ## API and worker
 
 ```

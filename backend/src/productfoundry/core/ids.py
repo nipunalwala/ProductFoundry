@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from pydantic import StringConstraints
 
-IdPrefix = Literal["run_", "prod_", "rev_", "cl_", "gap_", "req_", "epic_", "task_"]
+IdPrefix = Literal["run_", "prod_", "rev_", "cl_", "gap_", "req_", "epic_", "task_", "rel_"]
 
 
 def new_id(prefix: IdPrefix) -> str:

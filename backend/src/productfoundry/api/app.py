@@ -22,6 +22,7 @@ from productfoundry.api.schemas import (
     run_summary,
     run_view,
 )
+from productfoundry.core.changelog import ChangelogAlerts, ChangelogStore
 from productfoundry.core.clusters import ClusterStore
 from productfoundry.core.errors import (
     InvalidTransition,
@@ -51,6 +52,7 @@ class Backend:
     clusters: ClusterStore | None = None
     check_edits: bool = True  # check an edited pain-point report against the stored evidence
     pricing_alerts: AlertStore | None = None  # None: there is no database to hold them
+    changelog: ChangelogStore | None = None
 
 
 def _real_backend() -> tuple[Backend, object]:
@@ -73,6 +75,7 @@ def _real_backend() -> tuple[Backend, object]:
         clusters=clusters,
         check_edits=not settings.fake_stages,
         pricing_alerts=storage.PricingAlertRepository(sessions),
+        changelog=storage.ChangelogRepository(sessions),
     )
     return backend, engine
 
@@ -230,6 +233,15 @@ def create_app(backend: Backend | None = None) -> FastAPI:
         text = runtime.export(run, name, format, backend.reviews)
         headers = {"Content-Disposition": f'attachment; filename="{run_id}-{name}.{format}"'}
         return PlainTextResponse(text, media_type=MEDIA_TYPES[format], headers=headers)
+
+    @app.get("/runs/{run_id}/changelog", response_model=ChangelogAlerts, responses=ERRORS)
+    def get_changelog_alerts(run_id: str, backend: Uses) -> ChangelogAlerts:
+        """What competitors shipped that touches this run: fixes for its pain points, and
+        new features its PRD does not cover. Matching is done by `changelog match`."""
+        run = backend.store.get(run_id)
+        if backend.changelog is None:
+            raise ProductFoundryError("release items are kept in the database")
+        return runtime.changelog_alerts(run, backend.changelog)
 
     @app.get("/pricing/alerts", response_model=list[PricingAlert])
     def list_pricing_alerts(backend: Uses, product_id: str | None = None) -> list[PricingAlert]:

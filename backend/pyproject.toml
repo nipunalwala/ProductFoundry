@@ -5,6 +5,7 @@ description = "AI product manager agent: turns a software product idea into an e
 requires-python = ">=3.11"
 dependencies = [
     "alembic>=1.13",
+    "defusedxml>=0.7",
     "fastapi>=0.115",
     "google-play-scraper>=1.2",
     "httpx>=0.27",

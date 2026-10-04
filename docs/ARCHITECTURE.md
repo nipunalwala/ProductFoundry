@@ -239,7 +239,8 @@ planned; until then this is stated in the UI and the README.
 | Web search | Candidate competitors, and the Play id of an app by name | Tavily Search API | Milestone 1 |
 | Reddit | Discussions and complaints | Official API | Milestone 2 |
 | Product Hunt | Launches and comments | Official API | Milestone 2 |
-| Company websites | Pricing, features, changelogs | Headless browser, after checking robots.txt | Milestone 3 |
+| Company websites | Pricing, features, changelogs, release feeds | Headless browser (HTTP for feeds), after checking robots.txt | Milestone 3 |
+| GitHub | Releases of open-source competitors | Official REST API, unauthenticated | Milestone 3 |
 | Google Trends | Search interest over time | Unofficial library; relative values only | Milestone 3 |
 | Traffic estimators | Visits, sources | Paid APIs only; never scrape their sites | Not planned until a provider is chosen |
 | G2, Capterra, Amazon | Reviews | Excluded: they prohibit scraping | Never |
@@ -274,7 +275,8 @@ PostgreSQL with pgvector, run from `docker-compose.yml`.
 | `clusters`, `cluster_reviews` | Pain-point clusters per run and their member reviews |
 | `llm_calls` | Provenance, token counts, cost, cache hits |
 | `provider_usage` | Daily request and token counts per provider |
-| `pricing_snapshots`, `pricing_alerts`, `changelog_items`, `traction_signals` | Weekly market data and the changes found in it |
+| `pricing_snapshots`, `pricing_alerts`, `traction_signals` | Weekly market data and the changes found in it |
+| `changelog_sources`, `changelog_items`, `changelog_matches` | Where releases are read from, what was shipped, and what each item means for a run |
 | `tracked_issues` | Task to GitHub issue, PR and commit links |
 
 Reviews are shared across runs: a second run on the same product reuses stored
@@ -330,8 +332,21 @@ Features built on top:
   switching reviews, the ones belonging to each pain point, and a
   from/to/count/reasons table. "From" or "to" is empty when the review names no
   other product.
-- **Changelog tracking**: weekly; each release item is matched to clusters and
-  PRD requirements; alerts when the incumbent fixes a targeted gap.
+- **Changelog tracking** (built, `market/changelog.py`): release items are
+  collected weekly from the sources tracked for a product: GitHub releases
+  (GitHub's API), RSS or Atom feeds and changelog pages (after robots.txt), and
+  the current version's "What's new" note in each store (Apple's Lookup API;
+  Play's details page). No author is stored. Matching is per run and on
+  request, because it costs LLM calls: the gateway (task: changelog matching)
+  labels each unseen item of the run's products as fix, feature or other and
+  names the pain-point clusters it addresses and the PRD requirements it
+  already delivers. An answer citing an id the run does not have is rejected.
+  Matches are stored per (run, item), so an item is sent once. Alerts are
+  computed from the matches by a pure function: `shipped_fix` when an item
+  addresses a pain point (with that cluster's share of reviews in the three
+  months before and after the release, from the trend), and
+  `unplanned_feature` when a new feature matches no pain point and no
+  requirement.
 - **Pricing recommendation**: tiers, limits, free tier or trial and annual
   discount, each with its evidence. For India: INR price points, GST-inclusive
   display, UPI AutoPay. It is a starting point, not financial advice.

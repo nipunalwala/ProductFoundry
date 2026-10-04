@@ -381,6 +381,7 @@ def test_the_committed_openapi_schema_is_current():
         "/runs",
         "/runs/{run_id}",
         "/runs/{run_id}/approve",
+        "/runs/{run_id}/changelog",
         "/runs/{run_id}/exports/{name}",
         "/runs/{run_id}/resume",
         "/runs/{run_id}/stages/{stage_key}",

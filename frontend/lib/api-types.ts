@@ -105,6 +105,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runs/{run_id}/changelog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Changelog Alerts
+         * @description What competitors shipped that touches this run: fixes for its pain points, and
+         *     new features its PRD does not cover. Matching is done by `changelog match`.
+         */
+        get: operations["get_changelog_alerts_runs__run_id__changelog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runs/{run_id}/exports/{name}": {
         parameters: {
             query?: never;
@@ -178,6 +199,11 @@ export interface components {
             tasks: components["schemas"]["TaskCriteria"][];
         };
         /**
+         * AlertKind
+         * @enum {string}
+         */
+        AlertKind: "shipped_fix" | "unplanned_feature";
+        /**
          * Approve
          * @description Approve the checkpoint as it is, with a whole edited output, or with edits.
          */
@@ -199,6 +225,83 @@ export interface components {
          * @enum {string}
          */
         ChangeKind: "price_increased" | "price_decreased" | "price_added" | "price_removed" | "plan_added" | "plan_removed" | "limits_changed";
+        /** ChangelogAlert */
+        ChangelogAlert: {
+            /**
+             * Cluster Ids
+             * @default []
+             */
+            cluster_ids: string[];
+            /**
+             * Follow Ups
+             * @default {}
+             */
+            follow_ups: {
+                [key: string]: components["schemas"]["FollowUp"];
+            };
+            item: components["schemas"]["ChangelogItem"];
+            kind: components["schemas"]["AlertKind"];
+            /**
+             * Pain Point Labels
+             * @default []
+             */
+            pain_point_labels: string[];
+            /** Product Name */
+            product_name: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Requirement Ids
+             * @default []
+             */
+            requirement_ids: string[];
+        };
+        /** ChangelogAlerts */
+        ChangelogAlerts: {
+            /** Alerts */
+            alerts: components["schemas"]["ChangelogAlert"][];
+            /** Items Matched */
+            items_matched: number;
+            /** Run Id */
+            run_id: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+        };
+        /** ChangelogItem */
+        ChangelogItem: {
+            /**
+             * Body
+             * @default
+             */
+            body: string;
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /** Id */
+            id: string;
+            /** Product Id */
+            product_id: string;
+            /** Released At */
+            released_at?: string | null;
+            source: components["schemas"]["ChangelogSourceKind"];
+            /** Title */
+            title: string;
+            /** Url */
+            url?: string | null;
+            /** Version */
+            version?: string | null;
+        };
+        /**
+         * ChangelogSourceKind
+         * @enum {string}
+         */
+        ChangelogSourceKind: "github" | "feed" | "page" | "app_store" | "google_play";
         /** Competitor */
         Competitor: {
             /** Id */
@@ -297,6 +400,20 @@ export interface components {
             tasks: components["schemas"]["Task"][];
             /** Title */
             title: string;
+        };
+        /**
+         * FollowUp
+         * @description A pain point's share of all reviews before and after a release.
+         */
+        FollowUp: {
+            /** Change */
+            change?: number | null;
+            /** Months */
+            months: number;
+            /** Share After */
+            share_after?: number | null;
+            /** Share Before */
+            share_before?: number | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1250,6 +1367,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_changelog_alerts_runs__run_id__changelog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangelogAlerts"];
                 };
             };
             /** @description Not Found */

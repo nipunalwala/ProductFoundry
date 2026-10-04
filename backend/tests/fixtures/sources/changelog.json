@@ -1,0 +1,59 @@
+{
+  "_note": "Hand-written in the shape of the real payloads. Products, repositories, releases and notes are invented; no real release note or author is in the repository.",
+  "github": [
+    {
+      "id": 9001,
+      "tag_name": "v4.2.0",
+      "name": "4.2.0: no more daily cap",
+      "draft": false,
+      "published_at": "2026-08-10T09:30:00Z",
+      "html_url": "https://github.com/tabby-app/tabby/releases/tag/v4.2.0",
+      "body": "## Changed\n- The daily limit on adding expenses is removed for free accounts.\n- Faster sync.",
+      "author": {"login": "someone"}
+    },
+    {
+      "id": 9000,
+      "tag_name": "v4.1.3",
+      "name": null,
+      "draft": false,
+      "published_at": "2026-07-01T08:00:00Z",
+      "html_url": "https://github.com/tabby-app/tabby/releases/tag/v4.1.3",
+      "body": "Bug fixes and performance improvements.",
+      "author": {"login": "someone"}
+    },
+    {
+      "id": 8999,
+      "tag_name": "v4.2.0-rc1",
+      "name": "Draft",
+      "draft": true,
+      "published_at": null,
+      "html_url": "https://github.com/tabby-app/tabby/releases/tag/untagged",
+      "body": "",
+      "author": {"login": "someone"}
+    }
+  ],
+  "atom": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\">\n  <title>Tabby release notes</title>\n  <entry>\n    <id>tag:tabby.example,2026:release/42</id>\n    <title>Group budgets</title>\n    <link rel=\"alternate\" href=\"https://tabby.example/releases/group-budgets\"/>\n    <published>2026-09-02T10:00:00Z</published>\n    <author><name>Someone</name></author>\n    <content type=\"html\">&lt;p&gt;Set a monthly budget for a group &amp;amp; get a warning at 80%.&lt;/p&gt;</content>\n  </entry>\n  <entry>\n    <id>tag:tabby.example,2026:release/41</id>\n    <title>Maintenance</title>\n    <link href=\"https://tabby.example/releases/maintenance\"/>\n    <updated>2026-08-20T10:00:00+05:30</updated>\n    <summary>Dependency updates.</summary>\n  </entry>\n</feed>\n",
+  "rss": "<?xml version=\"1.0\"?>\n<rss version=\"2.0\" xmlns:content=\"http://purl.org/rss/1.0/modules/content/\">\n  <channel>\n    <title>Tabby blog</title>\n    <item>\n      <title>Totals are now exact</title>\n      <link>https://tabby.example/blog/exact-totals</link>\n      <guid>https://tabby.example/blog/exact-totals</guid>\n      <pubDate>Mon, 14 Sep 2026 06:00:00 GMT</pubDate>\n      <description>Short version.</description>\n      <content:encoded><![CDATA[<p>We fixed rounding so that group totals always add up.</p>]]></content:encoded>\n    </item>\n    <item>\n      <title></title>\n      <link>https://tabby.example/blog/untitled</link>\n    </item>\n  </channel>\n</rss>\n",
+  "page": "Tabby\nChangelog\nEverything we ship, newest first.\n\nSeptember 28, 2026\nv5.0.1\nUPI settle-up\nPay a friend back over UPI without leaving the app.\nWorks with every UPI app.\n\n12 Sep 2026 - Receipt scanning for everyone\nScanning a receipt no longer needs a paid plan.\n\n2026-08-30\nBug fixes.\n\nIn a long paragraph we may mention that on August 1, 2026 the company moved offices, which is not a release at all and must not start one.\n\nSubscribe to updates\n© 2026 Tabby",
+  "itunes_lookup": {
+    "resultCount": 1,
+    "results": [
+      {
+        "trackId": 123456789,
+        "trackName": "Tabby",
+        "trackViewUrl": "https://apps.apple.com/us/app/tabby/id123456789?uo=4",
+        "version": "5.0.1",
+        "currentVersionReleaseDate": "2026-09-28T07:00:00Z",
+        "releaseNotes": "Settle up over UPI.\nSmaller fixes.",
+        "sellerName": "Tabby Labs"
+      }
+    ]
+  },
+  "google_play_app": {
+    "title": "Tabby",
+    "version": "5.0.1",
+    "updated": 1790582400,
+    "recentChanges": "Settle up over UPI.<br>Smaller fixes.",
+    "developer": "Tabby Labs"
+  }
+}

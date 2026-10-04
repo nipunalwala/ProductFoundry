@@ -117,14 +117,17 @@ def next_pricing_refresh(now: datetime) -> datetime:
 
 
 def refresh_tracked_pricing() -> dict[str, int]:
-    """The weekly job: snapshot every tracked pricing page, then schedule the next pass."""
+    """The weekly job: snapshot every tracked pricing page, collect the release items of
+    every tracked source, then schedule the next pass."""
     from productfoundry import runtime, storage
 
     settings = Settings()
     engine = storage.make_engine()
     try:
         storage.check_ready(engine)
-        outcomes = runtime.pricing_refresh(storage.make_sessions(engine))
+        sessions = storage.make_sessions(engine)
+        outcomes = runtime.pricing_refresh(sessions)
+        releases = runtime.changelog_collect(sessions)
     finally:
         engine.dispose()
     counts = pricing_counts(outcomes)
@@ -132,6 +135,22 @@ def refresh_tracked_pricing() -> dict[str, int]:
     for outcome in outcomes:
         if outcome.skipped:
             log.warning("pricing page %s was skipped: %s", outcome.url, outcome.skipped)
+    # Release items are only collected here. Matching them to a run costs LLM calls and
+    # is asked for per run (`changelog match`), so a weekly pass never spends quota on
+    # runs nobody is looking at.
+    log.info(
+        "changelog: %d source(s) read, %d new release item(s)",
+        len(releases),
+        sum(outcome.new for outcome in releases),
+    )
+    for outcome in releases:
+        if outcome.skipped:
+            log.warning(
+                "release source %s %s was skipped: %s",
+                outcome.source.kind,
+                outcome.source.target,
+                outcome.skipped,
+            )
     schedule_pricing_refresh(settings.redis_url)
     return counts
 

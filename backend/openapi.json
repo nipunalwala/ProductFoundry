@@ -25,6 +25,14 @@
         "title": "AcceptanceCriteria",
         "type": "object"
       },
+      "AlertKind": {
+        "enum": [
+          "shipped_fix",
+          "unplanned_feature"
+        ],
+        "title": "AlertKind",
+        "type": "string"
+      },
       "Approve": {
         "additionalProperties": false,
         "description": "Approve the checkpoint as it is, with a whole edited output, or with edits.",
@@ -85,6 +93,193 @@
           "limits_changed"
         ],
         "title": "ChangeKind",
+        "type": "string"
+      },
+      "ChangelogAlert": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_ids": {
+            "default": [],
+            "items": {
+              "pattern": "^cl_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "title": "Cluster Ids",
+            "type": "array"
+          },
+          "follow_ups": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FollowUp"
+            },
+            "default": {},
+            "title": "Follow Ups",
+            "type": "object"
+          },
+          "item": {
+            "$ref": "#/components/schemas/ChangelogItem"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AlertKind"
+          },
+          "pain_point_labels": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Pain Point Labels",
+            "type": "array"
+          },
+          "product_name": {
+            "minLength": 1,
+            "title": "Product Name",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "requirement_ids": {
+            "default": [],
+            "items": {
+              "pattern": "^req_[A-Za-z0-9]+$",
+              "type": "string"
+            },
+            "title": "Requirement Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "item",
+          "product_name",
+          "reason"
+        ],
+        "title": "ChangelogAlert",
+        "type": "object"
+      },
+      "ChangelogAlerts": {
+        "additionalProperties": false,
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/ChangelogAlert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "items_matched": {
+            "title": "Items Matched",
+            "type": "integer"
+          },
+          "run_id": {
+            "minLength": 1,
+            "title": "Run Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "alerts",
+          "items_matched"
+        ],
+        "title": "ChangelogAlerts",
+        "type": "object"
+      },
+      "ChangelogItem": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Body",
+            "type": "string"
+          },
+          "fetched_at": {
+            "format": "date-time",
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^rel_[A-Za-z0-9]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "product_id": {
+            "pattern": "^prod_[A-Za-z0-9]+$",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ChangelogSourceKind"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "id",
+          "product_id",
+          "source",
+          "title",
+          "fetched_at"
+        ],
+        "title": "ChangelogItem",
+        "type": "object"
+      },
+      "ChangelogSourceKind": {
+        "enum": [
+          "github",
+          "feed",
+          "page",
+          "app_store",
+          "google_play"
+        ],
+        "title": "ChangelogSourceKind",
         "type": "string"
       },
       "Competitor": {
@@ -304,6 +499,54 @@
           "tasks"
         ],
         "title": "Epic",
+        "type": "object"
+      },
+      "FollowUp": {
+        "additionalProperties": false,
+        "description": "A pain point's share of all reviews before and after a release.",
+        "properties": {
+          "change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change"
+          },
+          "months": {
+            "title": "Months",
+            "type": "integer"
+          },
+          "share_after": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share After"
+          },
+          "share_before": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Before"
+          }
+        },
+        "required": [
+          "months"
+        ],
+        "title": "FollowUp",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -2473,6 +2716,66 @@
           }
         },
         "summary": "Approve"
+      }
+    },
+    "/runs/{run_id}/changelog": {
+      "get": {
+        "description": "What competitors shipped that touches this run: fixes for its pain points, and\nnew features its PRD does not cover. Matching is done by `changelog match`.",
+        "operationId": "get_changelog_alerts_runs__run_id__changelog_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangelogAlerts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Changelog Alerts"
       }
     },
     "/runs/{run_id}/exports/{name}": {

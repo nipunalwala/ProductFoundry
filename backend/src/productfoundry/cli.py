@@ -168,6 +168,25 @@ def build_parser() -> argparse.ArgumentParser:
         )
     pricing.set_defaults(handler=_cmd_pricing)
 
+    changelog = commands.add_parser("changelog", help="track what competitors ship")
+    actions = changelog.add_subparsers(dest="action", required=True)
+    track = actions.add_parser("track", help="add a release source for a product")
+    track.add_argument("--product", required=True, metavar="NAME")
+    track.add_argument("--run", metavar="RUN_ID", help="take the product's id from this run")
+    track.add_argument("--github", metavar="OWNER/REPO", help="releases of a public repository")
+    track.add_argument("--feed", metavar="URL", help="an RSS or Atom release-note feed")
+    track.add_argument("--page", metavar="URL", help="a public changelog page")
+    track.add_argument("--app-store", metavar="ID", help="the App Store track id")
+    track.add_argument("--google-play", metavar="ID", help="the Google Play package name")
+    actions.add_parser("fetch", help="read every tracked source and store new release items")
+    match = actions.add_parser("match", help="match a run's unseen release items (LLM calls)")
+    match.add_argument("run_id")
+    match.add_argument("--again", action="store_true", help="forget earlier matches first")
+    alerts = actions.add_parser("alerts", help="print a run's changelog alerts")
+    alerts.add_argument("run_id")
+    alerts.add_argument("--format", choices=["text", "json"], default="text")
+    changelog.set_defaults(handler=_cmd_changelog)
+
     schema = commands.add_parser("schema", help="export the JSON Schema of the contracts")
     schema.add_argument("name", nargs="?", choices=sorted(SCHEMAS), help="print one schema")
     schema.add_argument("--out", type=Path, help="write every schema to this directory")
@@ -482,6 +501,62 @@ def _cmd_pricing(args: argparse.Namespace) -> int:
             return 1
         for snapshot in snapshots if args.history else snapshots[-1:]:
             print(render_snapshot(snapshot, name))
+    return 0
+
+
+def _cmd_changelog(args: argparse.Namespace) -> int:
+    from productfoundry.core.changelog import ChangelogSource
+    from productfoundry.market.changelog import render_alerts
+
+    if args.memory:
+        raise ProductFoundryError("release items are kept in the database, not with --memory")
+    with _open_store(args) as store:
+        from productfoundry import storage
+
+        changelog = storage.ChangelogRepository(args.sessions)
+        if args.action == "track":
+            product, name = _pricing_product(args, store)
+            given = {
+                "github": args.github,
+                "feed": args.feed,
+                "page": args.page,
+                "app_store": args.app_store,
+                "google_play": args.google_play,
+            }
+            targets = {kind: target for kind, target in given.items() if target}
+            if not targets:
+                raise ProductFoundryError(
+                    "name a source: --github, --feed, --page, --app-store or --google-play"
+                )
+            for kind, target in targets.items():
+                try:
+                    source = ChangelogSource(product_id=product, kind=kind, target=target)
+                except ValidationError as exc:
+                    raise ProductFoundryError(f"invalid source: {exc}") from exc
+                changelog.track(source, name)
+                print(f"tracking {kind} {target} for {name}")
+            return 0
+        if args.action == "fetch":
+            outcomes = runtime.changelog_collect(args.sessions)
+            if not outcomes:
+                print("no release source is tracked: add one with `changelog track`")
+            for outcome in outcomes:
+                where = f"{outcome.source.kind} {outcome.source.target}"
+                if outcome.skipped:
+                    print(f"skipped {where}: {outcome.skipped}")
+                else:
+                    print(f"{where}: {outcome.found} release items, {outcome.new} new")
+            return 0
+        run = store.get(args.run_id)
+        if args.action == "match":
+            matches = runtime.changelog_match(args.sessions, run, again=args.again)
+            touching = sum(bool(m.cluster_ids or m.requirement_ids) for m in matches)
+            print(f"{len(matches)} new release items matched, {touching} touch this run")
+        alerts = runtime.changelog_alerts(run, changelog)
+        if getattr(args, "format", "text") == "json":
+            print(alerts.model_dump_json(indent=2))
+        else:
+            print(render_alerts(alerts))
     return 0
 
 
