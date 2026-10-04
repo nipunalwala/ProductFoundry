@@ -15,6 +15,8 @@ class _Config(BaseModel):
 class ProviderSpec(_Config):
     model: str = Field(min_length=1)
     api_key_setting: str
+    requests_per_minute: PositiveInt | None = None
+    tokens_per_minute: PositiveInt | None = None
     requests_per_day: PositiveInt | None = None
     tokens_per_day: PositiveInt | None = None
 

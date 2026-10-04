@@ -1,11 +1,14 @@
 """Stage 2 output: review counts. The reviews themselves are database rows."""
 
+from collections.abc import Iterable, Mapping
+from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Protocol
 
 from pydantic import AwareDatetime, Field, NonNegativeInt, StringConstraints, model_validator
 
 from productfoundry.core.base import NonEmptyStr, Schema, Url
+from productfoundry.core.competitors import Competitor
 from productfoundry.core.ids import ProductId, ReviewId
 
 
@@ -41,6 +44,27 @@ class Review(Schema):
     language: Language | None = None
     sentiment: Sentiment | None = None
     text: NonEmptyStr
+
+
+class ReviewStore(Protocol):
+    """Where reviews live between runs. Stage 2 writes here; later stages read."""
+
+    def ensure_product(self, competitor: Competitor) -> str:
+        """Store the product if it is new. Returns the id its reviews are kept under,
+        which is an earlier id when the same store app was already known."""
+        ...
+
+    def latest_reviewed_at(self, product_id: str, source: ReviewSourceName) -> datetime | None: ...
+
+    def for_product(self, product_id: str) -> list["Review"]: ...
+
+    def upsert(self, reviews: Iterable["Review"]) -> int:
+        """Store reviews, one per (source, source review id). Returns how many were new."""
+        ...
+
+    def set_analysis(self, analysis: Mapping[str, tuple[str, Sentiment | None]]) -> None:
+        """Set (language, sentiment) by review id."""
+        ...
 
 
 class ProductReviewCounts(Schema):

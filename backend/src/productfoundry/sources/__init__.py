@@ -1,6 +1,7 @@
 """Adapters for outside data. Only `sources/<name>` knows that source's URLs and payloads."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 
 from productfoundry.core.errors import ProductFoundryError
@@ -19,6 +20,25 @@ class StoreApp:
     developer: str
     url: str
     description: str = ""
+
+
+@dataclass(frozen=True)
+class RawReview:
+    """A review as fetched. The author is dropped by the adapter and never gets this far."""
+
+    source_review_id: str
+    text: str
+    reviewed_at: datetime
+    rating: int | None = None
+    url: str | None = None
+
+
+class ReviewSource(Protocol):
+    def fetch(
+        self, store_id: str, region: str, *, since: datetime | None, limit: int
+    ) -> list[RawReview]:
+        """Up to `limit` of the newest reviews, only those newer than `since` when given."""
+        ...
 
 
 class AppLookup(Protocol):

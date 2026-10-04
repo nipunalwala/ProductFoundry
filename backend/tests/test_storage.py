@@ -165,3 +165,69 @@ def test_a_run_paused_at_a_checkpoint_is_resumed_by_a_second_process(sessions, d
 
     assert run_id in cli(db_engine, tmp_path, "status")
     assert not (tmp_path / ".productfoundry").exists()
+
+
+# ReviewStore contract: what stage 2 needs, on both implementations
+
+
+def competitor(product_id="prod_new", name="Tricount", **store_ids):
+    from productfoundry.core.competitors import Competitor
+
+    return Competitor(
+        id=product_id,
+        name=name,
+        url="https://tricount.example",
+        positioning="Group expenses.",
+        target_users="Friends",
+        store_ids=store_ids,
+        reason="Competes.",
+    )
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def review_store(request):
+    if request.param == "memory":
+        from productfoundry.storage.memory import InMemoryReviewStore
+
+        return InMemoryReviewStore()
+    return ReviewRepository(request.getfixturevalue("sessions"))
+
+
+def test_a_product_is_stored_once_and_the_same_store_app_keeps_its_first_id(review_store):
+    first = competitor(google_play="com.tricount.app")
+    assert review_store.ensure_product(first) == "prod_new"
+    assert review_store.ensure_product(first) == "prod_new"
+    renamed = competitor("prod_other", "tricount: Split Bills", google_play="com.tricount.app")
+    assert review_store.ensure_product(renamed) == "prod_new"
+    by_ios = competitor("prod_ios", "Splid", app_store="991473495")
+    assert review_store.ensure_product(by_ios) == "prod_ios"
+    assert review_store.ensure_product(competitor("prod_x", "Splid 2", app_store="991473495")) == (
+        "prod_ios"
+    )
+
+
+def test_latest_review_date_is_per_product_and_source(review_store):
+    review_store.ensure_product(competitor("prod_a"))
+    assert review_store.latest_reviewed_at("prod_a", "google_play") is None
+    review_store.upsert([review(1), review(5), review(3)])
+    assert review_store.latest_reviewed_at("prod_a", "google_play") == DAY + timedelta(days=5)
+    assert review_store.latest_reviewed_at("prod_a", "app_store") is None
+    assert review_store.latest_reviewed_at("prod_b", "google_play") is None
+
+
+def test_analysis_is_set_by_review_id(review_store):
+    review_store.ensure_product(competitor("prod_a"))
+    pending = [review(n, language=None, sentiment=None) for n in (1, 2, 3)]
+    assert review_store.upsert(pending) == 3
+    review_store.set_analysis(
+        {pending[0].id: ("hinglish", "negative"), pending[1].id: ("und", None)}
+    )
+    review_store.set_analysis({})
+    stored = {
+        r.source_review_id: (r.language, r.sentiment) for r in review_store.for_product("prod_a")
+    }
+    assert stored == {
+        "gp-1": ("hinglish", "negative"),
+        "gp-2": ("und", None),
+        "gp-3": (None, None),
+    }

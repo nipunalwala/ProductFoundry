@@ -4,10 +4,11 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
+from productfoundry.core.reviews import ReviewStore
 from productfoundry.core.run_input import RunInput
 from productfoundry.llm.types import Completer
 from productfoundry.orchestrator.state import RunRecord
-from productfoundry.sources import AppLookup
+from productfoundry.sources import AppLookup, ReviewSource
 from productfoundry.sources.search import SearchProvider
 
 
@@ -19,6 +20,8 @@ class Services:
     llm: Completer | None = None
     search: SearchProvider | None = None
     app_lookups: Mapping[str, AppLookup] = field(default_factory=dict)  # by store name
+    review_sources: Mapping[str, ReviewSource] = field(default_factory=dict)  # by store name
+    reviews: ReviewStore | None = None
 
     def for_run(self, run_id: str, seed: int) -> "Services":
         """The services one run's stages get: its seed, and LLM calls recorded against it."""

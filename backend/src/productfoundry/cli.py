@@ -47,6 +47,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="run every stage as a stand-in: no search, store or LLM request is made",
     )
+    parser.add_argument(
+        "--review-cap",
+        type=int,
+        default=2000,
+        metavar="N",
+        help="reviews fetched per product per store in one run (default: %(default)s)",
+    )
     commands = parser.add_subparsers(dest="command")
 
     run = commands.add_parser("run", help="start a run from a RunInput JSON file")
@@ -148,8 +155,10 @@ def _orchestrator(args: argparse.Namespace, store: RunStore) -> Orchestrator:
     if args.fake_stages:
         return Orchestrator(store, FAKE_STAGES)
     from productfoundry.stages.s1_competitors import competitors_stage
+    from productfoundry.stages.s2_reviews import ReviewSettings, ReviewStage
 
-    stages = FAKE_STAGES | {"s1_competitors": competitors_stage}
+    reviews = ReviewStage(ReviewSettings(cap_per_store=args.review_cap))
+    stages = FAKE_STAGES | {"s1_competitors": competitors_stage, "s2_reviews": reviews}
     return Orchestrator(store, stages, services=_services(args))
 
 
@@ -158,17 +167,22 @@ def _services(args: argparse.Namespace) -> Services:
     from productfoundry.llm.fakes import InMemoryCallStore, InMemoryUsageStore
     from productfoundry.settings import Settings
     from productfoundry.sources.app_store import AppStoreLookup
+    from productfoundry.sources.app_store.reviews import AppStoreReviews
     from productfoundry.sources.google_play import GooglePlayLookup
+    from productfoundry.sources.google_play.reviews import GooglePlayReviews
     from productfoundry.sources.robots import Robots
     from productfoundry.sources.search.tavily import TavilySearch
+    from productfoundry.storage.memory import InMemoryReviewStore
 
     settings = Settings()
     routing = llm.load_routing()
     if args.sessions is not None:
         calls = storage.PostgresCallStore(args.sessions)
         usage = storage.PostgresUsageStore(args.sessions)
+        reviews = storage.ReviewRepository(args.sessions)
     else:
-        calls, usage = InMemoryCallStore(), InMemoryUsageStore()
+        # With --memory, reviews last only for this command.
+        calls, usage, reviews = InMemoryCallStore(), InMemoryUsageStore(), InMemoryReviewStore()
     gateway = llm.Gateway(routing, llm.live_providers(routing, settings), calls, usage)
 
     search = None
@@ -176,7 +190,13 @@ def _services(args: argparse.Namespace) -> Services:
     if settings.tavily_api_key and settings.tavily_api_key.get_secret_value():
         search = TavilySearch(settings.tavily_api_key.get_secret_value())
         lookups["google_play"] = GooglePlayLookup(search, Robots())
-    return Services(llm=gateway, search=search, app_lookups=lookups)
+    return Services(
+        llm=gateway,
+        search=search,
+        app_lookups=lookups,
+        review_sources={"google_play": GooglePlayReviews(), "app_store": AppStoreReviews()},
+        reviews=reviews,
+    )
 
 
 def _read_json(path: Path) -> object:

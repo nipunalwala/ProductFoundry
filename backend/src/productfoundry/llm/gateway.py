@@ -3,6 +3,7 @@
 import hashlib
 import json
 import time
+from collections import defaultdict, deque
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
 from typing import Any, TypeVar
@@ -27,6 +28,9 @@ from productfoundry.llm.types import (
 T = TypeVar("T", bound=BaseModel)
 
 ATTEMPTS_PER_PROVIDER = 2  # the call and one retry
+MINUTE = 60.0
+CHARS_PER_TOKEN = 3  # a cautious estimate; Hinglish and JSON tokenise worse than English
+REPLY_ALLOWANCE = 500  # tokens assumed for the answer when pacing
 
 
 class Gateway:
@@ -39,6 +43,7 @@ class Gateway:
         *,
         clock: Callable[[], datetime] = utcnow,
         sleep: Callable[[float], None] = time.sleep,
+        monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         self._routing = routing
         self._providers = providers  # only providers that have an API key
@@ -46,6 +51,9 @@ class Gateway:
         self._usage = usage
         self._clock = clock
         self._sleep = sleep
+        self._monotonic = monotonic
+        # Per provider: (time, tokens) of the calls this process made in the last minute.
+        self._recent: dict[str, deque[tuple[float, int]]] = defaultdict(deque)
 
     def complete(
         self, task: str, messages: Sequence[Message], schema: type[T], *, run_id: str | None = None
@@ -144,6 +152,30 @@ class Gateway:
             spec.requests_per_day is not None and requests >= share * spec.requests_per_day
         ) or (spec.tokens_per_day is not None and tokens >= share * spec.tokens_per_day)
 
+    def _pace(self, name: str, estimate: int) -> None:
+        """Wait until one more call fits the provider's per-minute limits.
+
+        Without this a burst of batches earns a 429 and spills onto the next
+        provider, spending its daily quota for nothing.
+        """
+        spec = self._routing.providers[name]
+        recent = self._recent[name]
+        while recent:
+            now = self._monotonic()
+            while recent and now - recent[0][0] >= MINUTE:
+                recent.popleft()
+            too_many = (
+                spec.requests_per_minute is not None and len(recent) >= spec.requests_per_minute
+            )
+            too_big = (
+                spec.tokens_per_minute is not None
+                and sum(tokens for _, tokens in recent) + estimate > spec.tokens_per_minute
+            )
+            if not recent or not (too_many or too_big):
+                return
+            self._sleep(max(MINUTE - (now - recent[0][0]), 0.0))
+            recent.popleft()  # it has left the window now, whatever clock the sleep used
+
     def _attempt(
         self,
         name: str,
@@ -152,6 +184,15 @@ class Gateway:
         run_id: str | None,
         on_record: Callable[[LlmCall], None] | None = None,
     ) -> tuple[T | None, Outcome, str | None]:
+        estimate = (
+            sum(len(message["content"]) for message in request.messages) // CHARS_PER_TOKEN
+            + REPLY_ALLOWANCE
+        )
+        # A model that reasons before answering uses far more tokens than the prompt
+        # suggests, so the provider's last real call is the better guide when larger.
+        recent = self._recent[name]
+        estimate = max(estimate, recent[-1][1] if recent else 0)
+        self._pace(name, estimate)
         started = time.perf_counter()
         result: T | None = None
         outcome: Outcome = "ok"
@@ -171,6 +212,7 @@ class Gateway:
             )
 
         now = self._clock()
+        self._recent[name].append((self._monotonic(), input_tokens + output_tokens or estimate))
         self._usage.add(name, now.date(), 1, input_tokens + output_tokens)
         call = LlmCall(
             task=request.task,

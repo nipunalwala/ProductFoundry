@@ -1,0 +1,91 @@
+{
+  "_note": "The structure and field names are those Apple's customer-reviews feed returned on 2026-10-04. Names, ids and texts are invented: no real review or reviewer is stored in the repository.",
+  "feed": {
+    "author": {"name": {"label": "iTunes Store"}, "uri": {"label": "http://www.apple.com/itunes/"}},
+    "entry": [
+      {
+        "author": {
+          "uri": {"label": "https://itunes.apple.com/in/reviews/id900000001"},
+          "name": {"label": "splitfan_91"},
+          "label": ""
+        },
+        "updated": {"label": "2026-10-03T07:17:38-07:00"},
+        "im:rating": {"label": "1"},
+        "im:version": {"label": "25.9.1"},
+        "id": {"label": "as-9001"},
+        "title": {"label": "Daily limit ruined it"},
+        "content": {
+          "label": "I used to love this app, now I can only add three expenses a day unless I pay.",
+          "attributes": {"type": "text"}
+        },
+        "link": {"attributes": {"rel": "related", "href": "https://itunes.apple.com/in/review?id=458023433&type=Purple%20Software"}},
+        "im:voteSum": {"label": "4"},
+        "im:contentType": {"attributes": {"term": "Application", "label": "Application"}},
+        "im:voteCount": {"label": "5"}
+      },
+      {
+        "author": {
+          "uri": {"label": "https://itunes.apple.com/in/reviews/id900000002"},
+          "name": {"label": "Tanvi G"},
+          "label": ""
+        },
+        "updated": {"label": "2026-10-01T22:02:11-07:00"},
+        "im:rating": {"label": "5"},
+        "im:version": {"label": "25.9.1"},
+        "id": {"label": "as-9002"},
+        "title": {"label": "Best app for trips"},
+        "content": {
+          "label": "Best app for trips with friends, the balances are always correct.",
+          "attributes": {"type": "text"}
+        },
+        "link": {"attributes": {"rel": "related", "href": "https://itunes.apple.com/in/review?id=458023433&type=Purple%20Software"}},
+        "im:voteSum": {"label": "0"},
+        "im:contentType": {"attributes": {"term": "Application", "label": "Application"}},
+        "im:voteCount": {"label": "0"}
+      },
+      {
+        "author": {
+          "uri": {"label": "https://itunes.apple.com/in/reviews/id900000003"},
+          "name": {"label": "rk_bangalore"},
+          "label": ""
+        },
+        "updated": {"label": "2026-09-29T03:40:00-07:00"},
+        "im:rating": {"label": "1"},
+        "im:version": {"label": "25.8.0"},
+        "id": {"label": "as-9003"},
+        "title": {"label": "App bahut slow hai"},
+        "content": {
+          "label": "App bahut slow hai, payment fail ho jata hai.",
+          "attributes": {"type": "text"}
+        },
+        "link": {"attributes": {"rel": "related", "href": "https://itunes.apple.com/in/review?id=458023433&type=Purple%20Software"}},
+        "im:voteSum": {"label": "1"},
+        "im:contentType": {"attributes": {"term": "Application", "label": "Application"}},
+        "im:voteCount": {"label": "1"}
+      },
+      {
+        "author": {
+          "uri": {"label": "https://itunes.apple.com/in/reviews/id900000004"},
+          "name": {"label": "Neha_S"},
+          "label": ""
+        },
+        "updated": {"label": "2026-09-20T10:00:00-07:00"},
+        "im:rating": {"label": "4"},
+        "im:version": {"label": "25.7.0"},
+        "id": {"label": "as-9004"},
+        "title": {"label": "Nice"},
+        "content": {"label": "Nice", "attributes": {"type": "text"}},
+        "link": {"attributes": {"rel": "related", "href": "https://itunes.apple.com/in/review?id=458023433&type=Purple%20Software"}},
+        "im:voteSum": {"label": "0"},
+        "im:contentType": {"attributes": {"term": "Application", "label": "Application"}},
+        "im:voteCount": {"label": "0"}
+      }
+    ],
+    "updated": {"label": "2026-10-04T00:00:00-07:00"},
+    "rights": {"label": "Copyright 2008 Apple Inc."},
+    "title": {"label": "iTunes Store: Customer Reviews"},
+    "icon": {"label": "http://itunes.apple.com/favicon.ico"},
+    "link": [],
+    "id": {"label": "https://itunes.apple.com/in/rss/customerreviews/page=1/id=458023433/sortby=mostrecent/json"}
+  }
+}

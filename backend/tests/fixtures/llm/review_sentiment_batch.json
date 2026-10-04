@@ -1,0 +1,24 @@
+{
+  "_note": "Written by hand before the first live run: invented reviews in English and Hinglish, with the labels a careful reader would give.",
+  "reviews": [
+    "app bahut slow hai, payment fail ho jata hai",
+    "Best app for trips with friends, the balances are always correct.",
+    "Bahut accha app hai, dosto ke saath kharcha split karna easy ho gaya",
+    "Good app hai but thoda slow chalta hai mere phone mein",
+    "Please add support for multiple currencies in one group.",
+    "paise kat gaye lekin transaction fail dikha raha hai, kya karu",
+    "Great, another update that logs me out every single day."
+  ],
+  "answer": {
+    "labels": [
+      {"n": 1, "sentiment": "negative", "language": "hinglish"},
+      {"n": 2, "sentiment": "positive", "language": "en"},
+      {"n": 3, "sentiment": "positive", "language": "hinglish"},
+      {"n": 4, "sentiment": "mixed", "language": "hinglish"},
+      {"n": 5, "sentiment": "neutral", "language": "en"},
+      {"n": 6, "sentiment": "negative", "language": "hinglish"},
+      {"n": 7, "sentiment": "negative", "language": "en"}
+    ]
+  },
+  "expected_sentiments": ["negative", "positive", "positive", "mixed", "neutral", "negative", "negative"]
+}

@@ -7,6 +7,7 @@ dependencies = [
     "alembic>=1.13",
     "google-play-scraper>=1.2",
     "httpx>=0.27",
+    "langdetect>=1.0.9",
     "litellm>=1.50",
     "pgvector>=0.3",
     "psycopg[binary]>=3.2",
