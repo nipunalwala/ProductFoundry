@@ -7,7 +7,9 @@ from productfoundry.core.pain_points import PainPointReport
 from productfoundry.core.prd import Prd
 from productfoundry.core.reviews import ReviewSet
 from productfoundry.core.run_input import RunInput
+from productfoundry.core.tasks import TaskPlan
 
 SCHEMAS: dict[str, type[BaseModel]] = {
-    model.__name__: model for model in (RunInput, CompetitorList, ReviewSet, PainPointReport, Prd)
+    model.__name__: model
+    for model in (RunInput, CompetitorList, ReviewSet, PainPointReport, Prd, TaskPlan)
 }

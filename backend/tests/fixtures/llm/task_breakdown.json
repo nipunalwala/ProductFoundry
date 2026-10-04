@@ -1,0 +1,67 @@
+{
+  "_note": "Written by hand: a task plan for the hand-written PRD of fixtures/llm/prd.json, whose requirements get the ids req_001 to req_004. T4 is listed before the task it depends on, to show that the build order follows dependencies.",
+  "answer": {
+    "epics": [
+      {
+        "title": "Reliable payments",
+        "description": "A payment always ends in a state the user can see.",
+        "tasks": [
+          {
+            "key": "T1",
+            "title": "Set up the project and the data model",
+            "description": "Create the app skeleton with groups, members, expenses and payments. Done when a group with one expense can be saved and read back.",
+            "requirements": ["req_001", "req_002"],
+            "depends_on": [],
+            "effort": "M"
+          },
+          {
+            "key": "T4",
+            "title": "Refund failed payments automatically",
+            "description": "When the payment provider reports a failure after a debit, start the refund without the user asking. Done when a failed test payment is refunded and shown as refunded.",
+            "requirements": ["req_001"],
+            "depends_on": ["T2"],
+            "effort": "L"
+          },
+          {
+            "key": "T2",
+            "title": "Track the state of every payment",
+            "description": "Record each payment as pending, completed, failed or refunded, and show the state in the group. Done when every payment shows exactly one final state.",
+            "requirements": ["req_001"],
+            "depends_on": ["T1"],
+            "effort": "M"
+          },
+          {
+            "key": "T5",
+            "title": "Keep ads out of the payment flow",
+            "description": "Make sure no full-screen ad can be shown between starting and finishing a payment. Done when the payment screens never request an ad.",
+            "requirements": ["req_003"],
+            "depends_on": ["T2"],
+            "effort": "S"
+          }
+        ]
+      },
+      {
+        "title": "Getting in and settling up",
+        "description": "Users can always log in and settle a group quickly.",
+        "tasks": [
+          {
+            "key": "T3",
+            "title": "Add a second way to log in",
+            "description": "Offer login by email link when the verification code does not arrive. Done when a user with no code can log in by the link.",
+            "requirements": ["req_002"],
+            "depends_on": ["T1"],
+            "effort": "M"
+          },
+          {
+            "key": "T6",
+            "title": "Settle a group in one tap",
+            "description": "Work out the fewest payments that clear a group and let a member pay their share in one tap. Done when a three-person group is settled with the minimum number of payments.",
+            "requirements": ["req_004", "req_001"],
+            "depends_on": ["T2", "T3"],
+            "effort": "L"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -126,6 +126,12 @@ def build_parser() -> argparse.ArgumentParser:
     prd.add_argument("--out", type=Path, help="write to this file instead of printing")
     prd.set_defaults(handler=_cmd_prd)
 
+    tasks = commands.add_parser("tasks", help="export the task plan of a run, in build order")
+    tasks.add_argument("run_id")
+    tasks.add_argument("--format", choices=["md", "json"], default="md")
+    tasks.add_argument("--out", type=Path, help="write to this file instead of printing")
+    tasks.set_defaults(handler=_cmd_tasks)
+
     db = commands.add_parser("db", help="manage the database")
     db.add_argument("action", choices=["upgrade"], help="upgrade: apply the migrations")
     db.set_defaults(handler=_cmd_db)
@@ -196,12 +202,14 @@ def _orchestrator(args: argparse.Namespace, store: RunStore) -> Orchestrator:
     from productfoundry.stages.s2_reviews import ReviewSettings, ReviewStage
     from productfoundry.stages.s3_pain_points import pain_points_stage
     from productfoundry.stages.s4_prd import prd_stage
+    from productfoundry.stages.s5_tasks import tasks_stage
 
     stages = {
         "s1_competitors": competitors_stage,
         "s2_reviews": ReviewStage(ReviewSettings(cap_per_store=args.review_cap)),
         "s3_pain_points": pain_points_stage,
         "s4_prd": prd_stage,
+        "s5_tasks": tasks_stage,
     }
     return Orchestrator(store, stages, services=_services(args))
 
@@ -398,6 +406,19 @@ def _cmd_prd(args: argparse.Namespace) -> int:
         report, names, reviews = _evidence(args, run)
         export = export_prd(prd, report, reviews, names, title=run.input.idea)
     return _write_export(args, export, render_prd_markdown)
+
+
+def _cmd_tasks(args: argparse.Namespace) -> int:
+    from productfoundry.core.prd import Prd
+    from productfoundry.core.tasks import TaskPlan
+    from productfoundry.stages.s5_tasks.export import export_tasks, render_tasks_markdown
+
+    with _open_store(args) as store:
+        run = store.get(args.run_id)
+        plan = TaskPlan.model_validate(_stage_output(run, "s5_tasks", "task plan"))
+        prd = Prd.model_validate(_stage_output(run, "s4_prd", "PRD"))
+    export = export_tasks(plan, prd, title=run.input.idea)
+    return _write_export(args, export, render_tasks_markdown)
 
 
 def _title(run: RunRecord) -> str:

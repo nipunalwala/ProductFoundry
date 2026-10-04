@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from pydantic import StringConstraints
 
-IdPrefix = Literal["run_", "prod_", "rev_", "cl_", "gap_", "req_", "task_"]
+IdPrefix = Literal["run_", "prod_", "rev_", "cl_", "gap_", "req_", "epic_", "task_"]
 
 
 def new_id(prefix: IdPrefix) -> str:
@@ -37,3 +37,5 @@ GapId = Annotated[str, StringConstraints(pattern=r"^gap_[A-Za-z0-9]+$")]
 # What a requirement may cite: a pain-point cluster or a market gap.
 EvidenceId = Annotated[str, StringConstraints(pattern=r"^(cl|gap)_[A-Za-z0-9]+$")]
 RequirementId = Annotated[str, StringConstraints(pattern=r"^req_[A-Za-z0-9]+$")]
+EpicId = Annotated[str, StringConstraints(pattern=r"^epic_[A-Za-z0-9]+$")]
+TaskId = Annotated[str, StringConstraints(pattern=r"^task_[A-Za-z0-9]+$")]

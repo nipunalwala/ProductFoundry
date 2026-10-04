@@ -15,6 +15,7 @@ from productfoundry.core.pain_points import (
 from productfoundry.core.prd import Prd, Requirement, market_gaps
 from productfoundry.core.reviews import ProductReviewCounts, ReviewSet
 from productfoundry.core.run_input import RunInput, StoreIds
+from productfoundry.core.tasks import Epic, Task, TaskPlan
 from productfoundry.orchestrator.protocols import Services, Stage
 
 
@@ -133,9 +134,29 @@ def fake_prd(
     )
 
 
+def fake_tasks(
+    run_input: RunInput, earlier_outputs: Mapping[str, BaseModel], services: Services
+) -> TaskPlan:
+    prd: Prd = earlier_outputs["s4_prd"]
+    tasks = [
+        Task(
+            id=f"task_{number:03d}",
+            title=f"Build {requirement.id}",
+            description=requirement.statement,
+            requirement_ids=[requirement.id],
+            depends_on=[f"task_{number - 1:03d}"] if number > 1 else [],
+            effort="M",
+        )
+        for number, requirement in enumerate(prd.requirements, start=1)
+    ]
+    epic = Epic(id="epic_01", title="First version", description="Everything.", tasks=tasks)
+    return TaskPlan(epics=[epic])
+
+
 FAKE_STAGES: dict[str, Stage] = {
     "s1_competitors": fake_competitors,
     "s2_reviews": fake_reviews,
     "s3_pain_points": fake_pain_points,
     "s4_prd": fake_prd,
+    "s5_tasks": fake_tasks,
 }

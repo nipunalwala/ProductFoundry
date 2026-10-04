@@ -8,6 +8,7 @@ from productfoundry.core.competitors import CompetitorList
 from productfoundry.core.pain_points import PainPointReport
 from productfoundry.core.prd import Prd
 from productfoundry.core.reviews import ReviewSet
+from productfoundry.core.tasks import TaskPlan
 
 # The run stops for approval after these stage numbers (ARCHITECTURE.md section 1).
 CHECKPOINT_STAGES: frozenset[int] = frozenset({1, 3, 6})
@@ -29,4 +30,5 @@ PIPELINE: tuple[StageSpec, ...] = (
     StageSpec(2, "s2_reviews", ReviewSet),
     StageSpec(3, "s3_pain_points", PainPointReport),
     StageSpec(4, "s4_prd", Prd),
+    StageSpec(5, "s5_tasks", TaskPlan),
 )
