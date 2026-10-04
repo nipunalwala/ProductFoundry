@@ -1,8 +1,8 @@
 from sqlalchemy import select
 
-from productfoundry.core.pricing import PricingSnapshot
+from productfoundry.core.pricing import PricingAlert, PricingSnapshot, TrackedPage
 from productfoundry.storage.db import Sessions
-from productfoundry.storage.models import PricingSnapshotRow, ProductRow
+from productfoundry.storage.models import PricingAlertRow, PricingSnapshotRow, ProductRow
 
 
 class PricingRepository:
@@ -28,6 +28,19 @@ class PricingRepository:
                 )
             )
 
+    def tracked(self) -> list[TrackedPage]:
+        statement = (
+            select(PricingSnapshotRow.product_id, ProductRow.name, PricingSnapshotRow.url)
+            .join(ProductRow, ProductRow.id == PricingSnapshotRow.product_id)
+            .distinct()
+            .order_by(ProductRow.name, PricingSnapshotRow.url)
+        )
+        with self._sessions() as session:
+            return [
+                TrackedPage(product_id=product, product_name=name, url=url)
+                for product, name, url in session.execute(statement)
+            ]
+
     def latest(self, product_id: str, url: str | None = None) -> PricingSnapshot | None:
         statement = select(PricingSnapshotRow).where(PricingSnapshotRow.product_id == product_id)
         if url is not None:
@@ -49,3 +62,31 @@ class PricingRepository:
             return [
                 PricingSnapshot.model_validate(row.snapshot) for row in session.scalars(statement)
             ]
+
+
+class PricingAlertRepository:
+    """Pricing alerts on `pricing_alerts`, append-only."""
+
+    def __init__(self, sessions: Sessions) -> None:
+        self._sessions = sessions
+
+    def add(self, alert: PricingAlert) -> None:
+        with self._sessions.begin() as session:
+            session.add(
+                PricingAlertRow(
+                    product_id=alert.product_id,
+                    url=alert.url,
+                    detected_at=alert.detected_at,
+                    alert=alert.model_dump(mode="json"),
+                )
+            )
+
+    def list(self, product_id: str | None = None) -> list[PricingAlert]:
+        statement = select(PricingAlertRow)
+        if product_id is not None:
+            statement = statement.where(PricingAlertRow.product_id == product_id)
+        statement = statement.order_by(
+            PricingAlertRow.detected_at.desc(), PricingAlertRow.id.desc()
+        )
+        with self._sessions() as session:
+            return [PricingAlert.model_validate(row.alert) for row in session.scalars(statement)]

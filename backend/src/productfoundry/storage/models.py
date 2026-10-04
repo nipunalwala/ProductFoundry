@@ -165,3 +165,15 @@ class PricingSnapshotRow(Base):
     text_hash: Mapped[str]  # sha256 of the page text: an unchanged page needs no new extraction
     schema_version: Mapped[int] = mapped_column(SmallInteger)
     snapshot: Mapped[dict[str, Any]]
+
+
+class PricingAlertRow(Base):
+    """A change between two snapshots of one pricing page."""
+
+    __tablename__ = "pricing_alerts"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"), index=True)
+    url: Mapped[str]
+    detected_at: Mapped[datetime] = mapped_column(index=True)
+    alert: Mapped[dict[str, Any]]

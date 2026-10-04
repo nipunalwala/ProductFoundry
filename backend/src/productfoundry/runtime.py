@@ -271,4 +271,23 @@ def pricing_snapshot(sessions, product_id: str, product_name: str, url: str):
         robots=Robots(),
         llm=live_gateway(sessions, settings),
         store=storage.PricingRepository(sessions),
+        alerts=storage.PricingAlertRepository(sessions),
+    )
+
+
+def pricing_refresh(sessions):
+    """Read every tracked pricing page again: what the worker does once a week."""
+    from productfoundry import storage
+    from productfoundry.market.pricing import refresh_tracked
+    from productfoundry.settings import Settings
+    from productfoundry.sources.pricing import PlaywrightFetcher
+    from productfoundry.sources.robots import Robots
+
+    settings = Settings()
+    return refresh_tracked(
+        fetcher=PlaywrightFetcher(settings.pricing_browser_channel),
+        robots=Robots(),
+        llm=live_gateway(sessions, settings),
+        store=storage.PricingRepository(sessions),
+        alerts=storage.PricingAlertRepository(sessions),
     )

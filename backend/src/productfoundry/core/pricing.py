@@ -128,11 +128,133 @@ def pricing_problems(plans: Sequence[Plan], trial_days: int | None, page_text: s
     return problems
 
 
+class ChangeKind(StrEnum):
+    PRICE_INCREASED = "price_increased"
+    PRICE_DECREASED = "price_decreased"
+    PRICE_ADDED = "price_added"  # a currency or billing period the plan did not have
+    PRICE_REMOVED = "price_removed"
+    PLAN_ADDED = "plan_added"
+    PLAN_REMOVED = "plan_removed"
+    LIMITS_CHANGED = "limits_changed"
+
+
+class PricingChange(Schema):
+    kind: ChangeKind
+    plan: NonEmptyStr
+    # For the price kinds: which price, and its amount before and after.
+    currency: Currency | None = None
+    period: BillingPeriod | None = None
+    billed_annually: bool = False
+    old_amount: Decimal | None = None
+    new_amount: Decimal | None = None
+    # For limits_changed: the limits before and after.
+    old_limits: list[NonEmptyStr] = []
+    new_limits: list[NonEmptyStr] = []
+
+
+def diff_snapshots(old: PricingSnapshot, new: PricingSnapshot) -> list[PricingChange]:
+    """What changed between two snapshots of one pricing page, in the new page's plan order.
+
+    Plans are matched by name, whatever the case. A price is matched by its
+    currency, period and whether it is billed annually. Features are not
+    compared: pages reword them too often for a change to mean anything.
+    """
+    before = {plan.name.casefold(): plan for plan in old.plans}
+    after = {plan.name.casefold(): plan for plan in new.plans}
+    changes = []
+    for key, plan in after.items():
+        if key not in before:
+            changes.append(PricingChange(kind=ChangeKind.PLAN_ADDED, plan=plan.name))
+            continue
+        was = {(p.currency, p.period, p.billed_annually): p for p in before[key].prices}
+        now = {(p.currency, p.period, p.billed_annually): p for p in plan.prices}
+        for (currency, period, annually), price in now.items():
+            which = {"currency": currency, "period": period, "billed_annually": annually}
+            earlier = was.get((currency, period, annually))
+            if earlier is None:
+                changes.append(
+                    PricingChange(
+                        kind=ChangeKind.PRICE_ADDED,
+                        plan=plan.name,
+                        new_amount=price.amount,
+                        **which,
+                    )
+                )
+            elif earlier.amount != price.amount:
+                rose = price.amount > earlier.amount
+                changes.append(
+                    PricingChange(
+                        kind=ChangeKind.PRICE_INCREASED if rose else ChangeKind.PRICE_DECREASED,
+                        plan=plan.name,
+                        old_amount=earlier.amount,
+                        new_amount=price.amount,
+                        **which,
+                    )
+                )
+        for (currency, period, annually), price in was.items():
+            if (currency, period, annually) not in now:
+                changes.append(
+                    PricingChange(
+                        kind=ChangeKind.PRICE_REMOVED,
+                        plan=plan.name,
+                        currency=currency,
+                        period=period,
+                        billed_annually=annually,
+                        old_amount=price.amount,
+                    )
+                )
+        if sorted(before[key].limits) != sorted(plan.limits):
+            changes.append(
+                PricingChange(
+                    kind=ChangeKind.LIMITS_CHANGED,
+                    plan=plan.name,
+                    old_limits=before[key].limits,
+                    new_limits=plan.limits,
+                )
+            )
+    changes.extend(
+        PricingChange(kind=ChangeKind.PLAN_REMOVED, plan=plan.name)
+        for key, plan in before.items()
+        if key not in after
+    )
+    return changes
+
+
+class PricingAlert(Schema):
+    """A pricing page that changed between two snapshots, and how."""
+
+    schema_version: Literal[1] = 1
+    product_id: ProductId
+    product_name: NonEmptyStr
+    url: Url
+    previous_fetched_at: datetime
+    detected_at: datetime  # when the changed page was fetched
+    changes: list[PricingChange] = Field(min_length=1)
+
+
+class TrackedPage(Schema):
+    """A pricing page that is read again every week: any page snapshotted once."""
+
+    product_id: ProductId
+    product_name: NonEmptyStr
+    url: Url
+
+
 class PricingStore(Protocol):
     def add(self, snapshot: PricingSnapshot, product_name: str) -> None: ...
+
+    def tracked(self) -> list[TrackedPage]: ...
 
     def latest(self, product_id: str, url: str | None = None) -> PricingSnapshot | None: ...
 
     def history(self, product_id: str) -> list[PricingSnapshot]:
         """The product's snapshots, oldest first."""
+        ...
+
+
+class AlertStore(Protocol):
+    def add(self, alert: PricingAlert) -> None: ...
+
+    def list(self, product_id: str | None = None) -> list[PricingAlert]:
+        """Alerts, newest first, for one product or for all."""
         ...

@@ -21,6 +21,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pricing/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Pricing Alerts
+         * @description Changes found between two snapshots of a tracked pricing page, newest first.
+         */
+        get: operations["list_pricing_alerts_pricing_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runs": {
         parameters: {
             query?: never;
@@ -169,6 +189,16 @@ export interface components {
             } | null;
             pain_points?: components["schemas"]["PainPointEdits"] | null;
         };
+        /**
+         * BillingPeriod
+         * @enum {string}
+         */
+        BillingPeriod: "month" | "year" | "one_time";
+        /**
+         * ChangeKind
+         * @enum {string}
+         */
+        ChangeKind: "price_increased" | "price_decreased" | "price_added" | "price_removed" | "plan_added" | "plan_removed" | "limits_changed";
         /** Competitor */
         Competitor: {
             /** Id */
@@ -267,6 +297,11 @@ export interface components {
             tasks: components["schemas"]["Task"][];
             /** Title */
             title: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
         };
         /** Health */
         Health: {
@@ -439,6 +474,36 @@ export interface components {
             switching_table: components["schemas"]["SwitchingRow"][];
             trend_settings: components["schemas"]["TrendSettings"];
         };
+        /** Plan */
+        Plan: {
+            /**
+             * Contact Sales
+             * @default false
+             */
+            contact_sales: boolean;
+            /**
+             * Features
+             * @default []
+             */
+            features: string[];
+            /**
+             * Is Free
+             * @default false
+             */
+            is_free: boolean;
+            /**
+             * Limits
+             * @default []
+             */
+            limits: string[];
+            /** Name */
+            name: string;
+            /**
+             * Prices
+             * @default []
+             */
+            prices: components["schemas"]["Price"][];
+        };
         /**
          * Platform
          * @enum {string}
@@ -472,6 +537,113 @@ export interface components {
             success_metrics: string[];
             /** Users */
             users: string;
+        };
+        /** Price */
+        Price: {
+            /** Amount */
+            amount: number | string;
+            /**
+             * Billed Annually
+             * @default false
+             */
+            billed_annually: boolean;
+            /** Currency */
+            currency: string;
+            /**
+             * Per Seat
+             * @default false
+             */
+            per_seat: boolean;
+            period: components["schemas"]["BillingPeriod"];
+        };
+        /**
+         * PricingAlert
+         * @description A pricing page that changed between two snapshots, and how.
+         */
+        PricingAlert: {
+            /** Changes */
+            changes: components["schemas"]["PricingChange"][];
+            /**
+             * Detected At
+             * Format: date-time
+             */
+            detected_at: string;
+            /**
+             * Previous Fetched At
+             * Format: date-time
+             */
+            previous_fetched_at: string;
+            /** Product Id */
+            product_id: string;
+            /** Product Name */
+            product_name: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Url */
+            url: string;
+        };
+        /** PricingChange */
+        PricingChange: {
+            /**
+             * Billed Annually
+             * @default false
+             */
+            billed_annually: boolean;
+            /** Currency */
+            currency?: string | null;
+            kind: components["schemas"]["ChangeKind"];
+            /** New Amount */
+            new_amount?: string | null;
+            /**
+             * New Limits
+             * @default []
+             */
+            new_limits: string[];
+            /** Old Amount */
+            old_amount?: string | null;
+            /**
+             * Old Limits
+             * @default []
+             */
+            old_limits: string[];
+            period?: components["schemas"]["BillingPeriod"] | null;
+            /** Plan */
+            plan: string;
+        };
+        /** PricingSnapshot */
+        PricingSnapshot: {
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /** Free Tier */
+            free_tier: boolean;
+            /** Free Trial */
+            free_trial: boolean;
+            /** Plans */
+            plans: components["schemas"]["Plan"][];
+            /** Product Id */
+            product_id: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Text Hash */
+            text_hash: string;
+            /**
+             * Trial Days
+             * @default null
+             */
+            trial_days: number | null;
+            /** Url */
+            url: string;
         };
         /**
          * Priority
@@ -863,6 +1035,19 @@ export interface components {
             /** Window Months */
             window_months: number;
         };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -888,6 +1073,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    list_pricing_alerts_pricing_alerts_get: {
+        parameters: {
+            query?: {
+                product_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricingAlert"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

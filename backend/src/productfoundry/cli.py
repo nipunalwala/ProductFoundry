@@ -154,6 +154,10 @@ def build_parser() -> argparse.ArgumentParser:
     snapshot.add_argument("--url", required=True, help="the public pricing page")
     show = actions.add_parser("show", help="print the stored snapshots of a product")
     show.add_argument("--history", action="store_true", help="every snapshot, not only the latest")
+    actions.add_parser("refresh", help="read every tracked pricing page again (the weekly job)")
+    alerts = actions.add_parser("alerts", help="print the price changes found so far")
+    alerts.add_argument("--product", metavar="NAME", help="only this product's changes")
+    alerts.add_argument("--run", metavar="RUN_ID", help=argparse.SUPPRESS)
     for action in (snapshot, show):
         action.add_argument("--product", required=True, metavar="NAME")
         action.add_argument(
@@ -429,20 +433,48 @@ def _pricing_product(args: argparse.Namespace, store: RunStore) -> tuple[str, st
 
 
 def _cmd_pricing(args: argparse.Namespace) -> int:
-    from productfoundry.market.pricing import render_snapshot
+    from productfoundry.market.pricing import render_alert, render_snapshot
 
     if args.memory:
         raise ProductFoundryError("pricing snapshots are kept in the database, not with --memory")
     with _open_store(args) as store:
         from productfoundry import storage
 
+        if args.action == "refresh":
+            from productfoundry.jobs.worker import pricing_counts
+
+            outcomes = runtime.pricing_refresh(args.sessions)
+            for outcome in outcomes:
+                if outcome.skipped:
+                    print(f"skipped: {outcome.skipped}")
+                elif outcome.unchanged:
+                    print(f"unchanged: {outcome.url}")
+                elif outcome.alert:
+                    print(render_alert(outcome.alert))
+                else:
+                    print(f"read, no change in plans: {outcome.url}")
+            counts = pricing_counts(outcomes)
+            print(", ".join(f"{count} {name}" for name, count in counts.items()))
+            return 0
+        if args.action == "alerts":
+            product = _pricing_product(args, store)[0] if args.product else None
+            found = storage.PricingAlertRepository(args.sessions).list(product)
+            if not found:
+                print("no price change has been found")
+            for alert in found:
+                print(render_alert(alert))
+            return 0
         product, name = _pricing_product(args, store)
         if args.action == "snapshot":
             outcome = runtime.pricing_snapshot(args.sessions, product, name, args.url)
             if outcome.snapshot is None:
                 print(f"skipped: {outcome.skipped}")
                 return 1
+            if outcome.unchanged:
+                print("the page has not changed since the latest snapshot")
             print(render_snapshot(outcome.snapshot, name))
+            if outcome.alert:
+                print(render_alert(outcome.alert))
             return 0
         snapshots = storage.PricingRepository(args.sessions).history(product)
         if not snapshots:

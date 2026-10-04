@@ -5,7 +5,7 @@ from datetime import datetime
 
 from productfoundry.core.clusters import Cluster
 from productfoundry.core.competitors import Competitor
-from productfoundry.core.pricing import PricingSnapshot
+from productfoundry.core.pricing import PricingAlert, PricingSnapshot, TrackedPage
 from productfoundry.core.reviews import ANALYSED_LANGUAGES, Review, ReviewSourceName, Sentiment
 
 
@@ -105,6 +105,13 @@ class InMemoryPricingStore:
         self._snapshots.append(snapshot)
         self.names.setdefault(snapshot.product_id, product_name)
 
+    def tracked(self) -> list[TrackedPage]:
+        pages = {(s.product_id, s.url) for s in self._snapshots}
+        return [
+            TrackedPage(product_id=product, product_name=self.names[product], url=url)
+            for product, url in sorted(pages, key=lambda page: (self.names[page[0]], page[1]))
+        ]
+
     def latest(self, product_id: str, url: str | None = None) -> PricingSnapshot | None:
         found = [s for s in self.history(product_id) if url is None or s.url == url]
         return found[-1] if found else None
@@ -112,3 +119,15 @@ class InMemoryPricingStore:
     def history(self, product_id: str) -> list[PricingSnapshot]:
         found = [s for s in self._snapshots if s.product_id == product_id]
         return sorted(found, key=lambda snapshot: snapshot.fetched_at)
+
+
+class InMemoryAlertStore:
+    def __init__(self) -> None:
+        self._alerts: list[PricingAlert] = []
+
+    def add(self, alert: PricingAlert) -> None:
+        self._alerts.append(alert)
+
+    def list(self, product_id: str | None = None) -> list[PricingAlert]:
+        found = [a for a in self._alerts if product_id is None or a.product_id == product_id]
+        return sorted(found, key=lambda alert: alert.detected_at, reverse=True)

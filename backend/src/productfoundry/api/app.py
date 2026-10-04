@@ -29,6 +29,7 @@ from productfoundry.core.errors import (
     RunNotFound,
     StageOutputInvalid,
 )
+from productfoundry.core.pricing import AlertStore, PricingAlert
 from productfoundry.core.registry import SCHEMAS
 from productfoundry.core.reviews import ReviewStore
 from productfoundry.jobs import JobQueue
@@ -49,6 +50,7 @@ class Backend:
     reviews: ReviewStore | None = None  # None: exports that quote reviews are unavailable
     clusters: ClusterStore | None = None
     check_edits: bool = True  # check an edited pain-point report against the stored evidence
+    pricing_alerts: AlertStore | None = None  # None: there is no database to hold them
 
 
 def _real_backend() -> tuple[Backend, object]:
@@ -70,6 +72,7 @@ def _real_backend() -> tuple[Backend, object]:
         reviews=reviews,
         clusters=clusters,
         check_edits=not settings.fake_stages,
+        pricing_alerts=storage.PricingAlertRepository(sessions),
     )
     return backend, engine
 
@@ -227,5 +230,12 @@ def create_app(backend: Backend | None = None) -> FastAPI:
         text = runtime.export(run, name, format, backend.reviews)
         headers = {"Content-Disposition": f'attachment; filename="{run_id}-{name}.{format}"'}
         return PlainTextResponse(text, media_type=MEDIA_TYPES[format], headers=headers)
+
+    @app.get("/pricing/alerts", response_model=list[PricingAlert])
+    def list_pricing_alerts(backend: Uses, product_id: str | None = None) -> list[PricingAlert]:
+        """Changes found between two snapshots of a tracked pricing page, newest first."""
+        if backend.pricing_alerts is None:
+            return []
+        return backend.pricing_alerts.list(product_id)
 
     return app

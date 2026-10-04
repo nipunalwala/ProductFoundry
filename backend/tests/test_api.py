@@ -377,6 +377,7 @@ def test_the_committed_openapi_schema_is_current():
     paths = schema["paths"]
     assert sorted(paths) == [
         "/health",
+        "/pricing/alerts",
         "/runs",
         "/runs/{run_id}",
         "/runs/{run_id}/approve",

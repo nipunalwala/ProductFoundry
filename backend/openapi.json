@@ -74,6 +74,19 @@
         "title": "BillingPeriod",
         "type": "string"
       },
+      "ChangeKind": {
+        "enum": [
+          "price_increased",
+          "price_decreased",
+          "price_added",
+          "price_removed",
+          "plan_added",
+          "plan_removed",
+          "limits_changed"
+        ],
+        "title": "ChangeKind",
+        "type": "string"
+      },
       "Competitor": {
         "additionalProperties": false,
         "properties": {
@@ -291,6 +304,19 @@
           "tasks"
         ],
         "title": "Epic",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
         "type": "object"
       },
       "Health": {
@@ -842,6 +868,149 @@
           "period"
         ],
         "title": "Price",
+        "type": "object"
+      },
+      "PricingAlert": {
+        "additionalProperties": false,
+        "description": "A pricing page that changed between two snapshots, and how.",
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/PricingChange"
+            },
+            "minItems": 1,
+            "title": "Changes",
+            "type": "array"
+          },
+          "detected_at": {
+            "format": "date-time",
+            "title": "Detected At",
+            "type": "string"
+          },
+          "previous_fetched_at": {
+            "format": "date-time",
+            "title": "Previous Fetched At",
+            "type": "string"
+          },
+          "product_id": {
+            "pattern": "^prod_[A-Za-z0-9]+$",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "product_name": {
+            "minLength": 1,
+            "title": "Product Name",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "url": {
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "product_name",
+          "url",
+          "previous_fetched_at",
+          "detected_at",
+          "changes"
+        ],
+        "title": "PricingAlert",
+        "type": "object"
+      },
+      "PricingChange": {
+        "additionalProperties": false,
+        "properties": {
+          "billed_annually": {
+            "default": false,
+            "title": "Billed Annually",
+            "type": "boolean"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ChangeKind"
+          },
+          "new_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Amount"
+          },
+          "new_limits": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "New Limits",
+            "type": "array"
+          },
+          "old_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Amount"
+          },
+          "old_limits": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Old Limits",
+            "type": "array"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BillingPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "plan": {
+            "minLength": 1,
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "plan"
+        ],
+        "title": "PricingChange",
         "type": "object"
       },
       "PricingSnapshot": {
@@ -1970,6 +2139,46 @@
         ],
         "title": "TrendSettings",
         "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
       }
     }
   },
@@ -1996,6 +2205,57 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/pricing/alerts": {
+      "get": {
+        "description": "Changes found between two snapshots of a tracked pricing page, newest first.",
+        "operationId": "list_pricing_alerts_pricing_alerts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "product_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PricingAlert"
+                  },
+                  "title": "Response List Pricing Alerts Pricing Alerts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Pricing Alerts"
       }
     },
     "/runs": {

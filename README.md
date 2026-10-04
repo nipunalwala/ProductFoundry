@@ -95,6 +95,16 @@ the run's reviews. The page is read with a headless browser: set
 `PRICING_BROWSER_CHANNEL=msedge` (or `chrome`) in `.env` to use an installed
 one, or run `py -m uv run playwright install chromium` once.
 
+```
+py -m uv run productfoundry pricing refresh             # read every tracked page again
+py -m uv run productfoundry pricing alerts [--product NAME]
+```
+
+A page that was snapshotted once is tracked: the worker reads it again every
+Monday at 03:00 UTC, and `refresh` does the same on demand. An unchanged page
+costs no LLM call. A change in a price, a plan or a limit is stored as an alert,
+shown by `pricing alerts` and by `GET /pricing/alerts`.
+
 ## API and worker
 
 ```

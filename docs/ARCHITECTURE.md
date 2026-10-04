@@ -59,8 +59,9 @@ FastAPI + job queue   orchestrator: owns runs, runs stages, pauses at (C)
 The orchestrator can be driven two ways. The CLI runs it in-process. The API
 creates and approves runs and puts the work on the queue; the worker runs the
 same orchestrator. Both are wired in `productfoundry/runtime.py`, so there is
-one implementation. A scheduled job in the worker re-queues runs paused for
-quota after the daily reset.
+one implementation. Two scheduled jobs live in the worker: one re-queues runs
+paused for quota after the daily reset, the other reads the tracked pricing
+pages once a week.
 
 ## 4. Repository layout
 
@@ -273,7 +274,7 @@ PostgreSQL with pgvector, run from `docker-compose.yml`.
 | `clusters`, `cluster_reviews` | Pain-point clusters per run and their member reviews |
 | `llm_calls` | Provenance, token counts, cost, cache hits |
 | `provider_usage` | Daily request and token counts per provider |
-| `pricing_snapshots`, `changelog_items`, `traction_signals` | Weekly market data |
+| `pricing_snapshots`, `pricing_alerts`, `changelog_items`, `traction_signals` | Weekly market data and the changes found in it |
 | `tracked_issues` | Task to GitHub issue, PR and commit links |
 
 Reviews are shared across runs: a second run on the same product reuses stored
@@ -298,6 +299,16 @@ stored. Amounts are never calculated (no monthly price times 12). A page that
 robots.txt disallows, that cannot be read, or that shows no plan is skipped and
 reported. A snapshot stores the page text's hash and the fetch time, not the
 text.
+
+Weekly tracking (built): any page snapshotted once is tracked. The worker reads
+every tracked page again on Mondays at 03:00 UTC. A page whose text hash equals
+the latest snapshot's is not extracted again: no LLM call, nothing stored.
+Otherwise the new snapshot is stored and compared with the previous one by a
+pure function (`core.pricing.diff_snapshots`): price increased or decreased,
+price option added or removed, plan added or removed, limits changed. Plans are
+matched by name, prices by currency and period; features are not compared. A
+pair with any change gives one `PricingAlert` listing them, stored in
+`pricing_alerts` and served by `GET /pricing/alerts`.
 
 Features built on top:
 
