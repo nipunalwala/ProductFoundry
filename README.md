@@ -22,7 +22,11 @@ docker compose up -d db
 cd backend
 py -m uv sync
 py -m uv run productfoundry --version
+py -m uv run productfoundry db upgrade
 ```
+
+Runs are stored in the database. Pass `--memory` to keep them in a local JSON
+file instead, with no database needed.
 
 ## Use
 

@@ -1,7 +1,8 @@
 import argparse
 import json
 import sys
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -11,7 +12,7 @@ from productfoundry.core.base import schema_version_of
 from productfoundry.core.errors import ProductFoundryError
 from productfoundry.core.registry import SCHEMAS
 from productfoundry.core.run_input import RunInput
-from productfoundry.orchestrator import InMemoryRunStore, Orchestrator, RunRecord
+from productfoundry.orchestrator import InMemoryRunStore, Orchestrator, RunRecord, RunStore
 from productfoundry.stages.fakes import FAKE_STAGES
 
 DEFAULT_STATE_FILE = Path(".productfoundry") / "runs.json"
@@ -24,10 +25,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument(
+        "--memory",
+        action="store_true",
+        help="keep runs in a local JSON file instead of the database",
+    )
+    parser.add_argument(
         "--state-file",
         type=Path,
         default=DEFAULT_STATE_FILE,
-        help="where runs are kept between commands (default: %(default)s)",
+        help="where --memory keeps runs between commands (default: %(default)s)",
     )
     commands = parser.add_subparsers(dest="command")
 
@@ -53,6 +59,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     resume.set_defaults(handler=_cmd_resume)
 
+    db = commands.add_parser("db", help="manage the database")
+    db.add_argument("action", choices=["upgrade"], help="upgrade: apply the migrations")
+    db.set_defaults(handler=_cmd_db)
+
     schema = commands.add_parser("schema", help="export the JSON Schema of the contracts")
     schema.add_argument("name", nargs="?", choices=sorted(SCHEMAS), help="print one schema")
     schema.add_argument("--out", type=Path, help="write every schema to this directory")
@@ -74,18 +84,34 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
 
-def _load_store(path: Path) -> InMemoryRunStore:
+@contextmanager
+def _open_store(args: argparse.Namespace) -> Iterator[RunStore]:
+    """The Postgres store, or with --memory the in-memory one kept in the state file."""
+    if not args.memory:
+        # Imported here so --memory and `schema` work without a database driver in use.
+        from productfoundry import storage
+
+        engine = storage.make_engine()
+        try:
+            storage.check_ready(engine)
+            yield storage.PostgresRunStore(storage.make_sessions(engine))
+        finally:
+            engine.dispose()
+        return
+
+    path: Path = args.state_file
     if path.exists():
-        return InMemoryRunStore.load_json(path.read_text(encoding="utf-8"))
-    return InMemoryRunStore()
+        store = InMemoryRunStore.load_json(path.read_text(encoding="utf-8"))
+    else:
+        store = InMemoryRunStore()
+    try:
+        yield store
+    finally:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(store.dump_json(), encoding="utf-8")
 
 
-def _save_store(store: InMemoryRunStore, path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(store.dump_json(), encoding="utf-8")
-
-
-def _orchestrator(store: InMemoryRunStore) -> Orchestrator:
+def _orchestrator(store: RunStore) -> Orchestrator:
     return Orchestrator(store, FAKE_STAGES)
 
 
@@ -103,25 +129,24 @@ def _cmd_run(args: argparse.Namespace) -> int:
         run_input = RunInput.model_validate(_read_json(args.input))
     except ValidationError as exc:
         raise ProductFoundryError(f"invalid run input in {args.input}:\n{exc}") from exc
-    store = _load_store(args.state_file)
-    orchestrator = _orchestrator(store)
-    run = orchestrator.create_run(run_input, seed=args.seed)
-    run = orchestrator.resume(run.id)
-    _save_store(store, args.state_file)
+    with _open_store(args) as store:
+        orchestrator = _orchestrator(store)
+        run = orchestrator.create_run(run_input, seed=args.seed)
+        run = orchestrator.resume(run.id)
     _print_run(run)
     return 0
 
 
 def _cmd_status(args: argparse.Namespace) -> int:
-    store = _load_store(args.state_file)
+    with _open_store(args) as store:
+        runs = store.list_runs() if args.run_id is None else [store.get(args.run_id)]
     if args.run_id is None:
-        runs = store.list_runs()
         if not runs:
             print("no runs")
         for run in runs:
             print(f"{run.id}  {run.status:<17}  {run.created_at:%Y-%m-%d %H:%M}  {run.input.idea}")
         return 0
-    run = store.get(args.run_id)
+    run = runs[0]
     if args.output is None:
         _print_run(run)
         return 0
@@ -137,20 +162,30 @@ def _cmd_status(args: argparse.Namespace) -> int:
 
 def _cmd_approve(args: argparse.Namespace) -> int:
     edited = _read_json(args.edit) if args.edit else None
-    store = _load_store(args.state_file)
-    orchestrator = _orchestrator(store)
-    orchestrator.approve(args.run_id, edited)
-    run = orchestrator.resume(args.run_id)
-    _save_store(store, args.state_file)
+    with _open_store(args) as store:
+        orchestrator = _orchestrator(store)
+        orchestrator.approve(args.run_id, edited)
+        run = orchestrator.resume(args.run_id)
     _print_run(run)
     return 0
 
 
 def _cmd_resume(args: argparse.Namespace) -> int:
-    store = _load_store(args.state_file)
-    run = _orchestrator(store).resume(args.run_id, from_stage=args.from_stage)
-    _save_store(store, args.state_file)
+    with _open_store(args) as store:
+        run = _orchestrator(store).resume(args.run_id, from_stage=args.from_stage)
     _print_run(run)
+    return 0
+
+
+def _cmd_db(args: argparse.Namespace) -> int:
+    from productfoundry import storage
+
+    engine = storage.make_engine()
+    try:
+        storage.upgrade(engine)
+    finally:
+        engine.dispose()
+    print("database is up to date")
     return 0
 
 

@@ -22,7 +22,7 @@ def cli(tmp_path, capsys):
     state = tmp_path / "runs.json"
 
     def run(*args):
-        code = main(["--state-file", str(state), *args])
+        code = main(["--memory", "--state-file", str(state), *args])
         captured = capsys.readouterr()
         return code, captured.out, captured.err
 

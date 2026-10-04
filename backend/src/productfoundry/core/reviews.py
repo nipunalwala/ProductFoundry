@@ -3,10 +3,10 @@
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import Field, NonNegativeInt, StringConstraints, model_validator
+from pydantic import AwareDatetime, Field, NonNegativeInt, StringConstraints, model_validator
 
-from productfoundry.core.base import NonEmptyStr, Schema
-from productfoundry.core.ids import ProductId
+from productfoundry.core.base import NonEmptyStr, Schema, Url
+from productfoundry.core.ids import ProductId, ReviewId
 
 
 class ReviewSourceName(StrEnum):
@@ -26,6 +26,21 @@ class Sentiment(StrEnum):
 # `en`, `hinglish`, or the detected ISO 639 code (ARCHITECTURE.md section 6.1).
 Language = Annotated[str, StringConstraints(pattern=r"^(hinglish|[a-z]{2,3})$")]
 ANALYSED_LANGUAGES: frozenset[str] = frozenset({"en", "hinglish"})
+
+
+class Review(Schema):
+    """A stored review. It has no field for a username or a profile link, and takes none."""
+
+    id: ReviewId
+    product_id: ProductId
+    source: ReviewSourceName
+    source_review_id: NonEmptyStr
+    url: Url | None = None
+    reviewed_at: AwareDatetime  # the source's date
+    rating: int | None = Field(default=None, ge=1, le=5)
+    language: Language | None = None
+    sentiment: Sentiment | None = None
+    text: NonEmptyStr
 
 
 class ProductReviewCounts(Schema):

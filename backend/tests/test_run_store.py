@@ -5,14 +5,25 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from productfoundry.core.errors import RunAlreadyExists, RunNotFound
-from productfoundry.orchestrator import InMemoryRunStore, RunRecord, RunStatus, StageRecord
+from productfoundry.orchestrator import (
+    InMemoryRunStore,
+    Orchestrator,
+    RunRecord,
+    RunStatus,
+    StageRecord,
+)
+from productfoundry.stages.fakes import FAKE_STAGES
 
 T0 = datetime(2026, 10, 4, 12, 0, tzinfo=UTC)
 
 
-@pytest.fixture(params=["memory"])
+@pytest.fixture(params=["memory", "postgres"])
 def store(request):
-    return InMemoryRunStore()
+    if request.param == "memory":
+        return InMemoryRunStore()
+    from productfoundry.storage import PostgresRunStore
+
+    return PostgresRunStore(request.getfixturevalue("sessions"))
 
 
 def make_run(run_input, run_id="run_a", created_at=T0) -> RunRecord:
@@ -84,3 +95,24 @@ def test_in_memory_store_round_trips_through_json(run_input):
     store.create(make_run(run_input))
     restored = InMemoryRunStore.load_json(store.dump_json())
     assert restored.list_runs() == store.list_runs()
+
+
+def test_a_full_run_works_on_any_store(store, run_input):
+    orchestrator = Orchestrator(store, FAKE_STAGES)
+    run = orchestrator.resume(orchestrator.create_run(run_input, seed=3).id)
+    edited = dict(run.stages[0].output, competitors=run.stages[0].output["competitors"][:1])
+    orchestrator.approve(run.id, edited)
+    orchestrator.resume(run.id)
+    orchestrator.approve(run.id)
+    run = orchestrator.resume(run.id)
+
+    stored = store.get(run.id)
+    assert stored == run
+    assert stored.status is RunStatus.COMPLETED
+    assert stored.seed == 3
+    assert len(stored.stages[0].output["competitors"]) == 2
+    assert len(stored.stages[0].edited_output["competitors"]) == 1
+
+    stored = Orchestrator(store, FAKE_STAGES).resume(run.id, from_stage="s2_reviews")
+    assert store.get(run.id).stages[2].approved_at is None
+    assert [stage.key for stage in store.get(run.id).stages] == [s.key for s in run.stages]
