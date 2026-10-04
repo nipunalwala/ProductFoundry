@@ -287,7 +287,7 @@ reviews and fetches only newer ones.
 | Signal | Method | Reliability | Shown as |
 |---|---|---|---|
 | Pricing | Fetch public pricing pages, parse plans, prices, limits and tiers; weekly snapshot; flag changes; INR and USD separately | High | Table plus change history |
-| Traction | Combine Google Trends, download ranges, review-count growth, job postings and community mentions | Medium | growing / flat / declining |
+| Traction | Combine Google Trends, download ranges, rating-count growth and review volume (job postings and community mentions: not built) | Medium at best | growing / flat / declining, with confidence, sources and missing signals |
 | Revenue | Public filings, self-reported figures, marketplace listings; otherwise customers x average plan price | Low | A range, a confidence label and its basis; tagged experimental |
 
 Pricing snapshots (built): `market/pricing.py` checks robots.txt, reads the
@@ -311,6 +311,22 @@ price option added or removed, plan added or removed, limits changed. Plans are
 matched by name, prices by currency and period; features are not compared. A
 pair with any change gives one `PricingAlert` listing them, stored in
 `pricing_alerts` and served by `GET /pricing/alerts`.
+
+Traction (built, `core/traction.py` and `market/traction.py`): four signals, each
+stored in `traction_signals` with its source and date. Search interest (Google
+Trends, relative values): the mean of the last 13 weeks against the 13 before.
+Downloads (Google Play's install range): counts only when the range moves, since
+an unchanged range is too coarse to mean flat. Rating count (both stores): the
+daily rate of new ratings in the latest interval against the one before, which
+needs three observations at least three weeks apart. Review volume (stored
+reviews): the last three full months against the three before, only when every
+source has reviews in each earlier month, so that a capped fetch is not read as
+growth. A change within 15% is flat. The score is a pure function: signals that
+agree give their direction with medium confidence; one signal alone, or a
+partial agreement, gives low confidence; growing against declining gives flat
+with low confidence and says so; no signal gives no label. Confidence is never
+high. The output lists every source and every missing signal with the reason.
+Job postings and community mentions are not collected.
 
 Features built on top:
 

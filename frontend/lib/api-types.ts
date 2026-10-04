@@ -385,6 +385,11 @@ export interface components {
          */
         CriterionKind: "happy_path" | "edge_case" | "failure_state";
         /**
+         * Direction
+         * @enum {string}
+         */
+        Direction: "growing" | "flat" | "declining";
+        /**
          * Effort
          * @description A fixed scale for one developer. Anything larger than XL is split into tasks.
          * @enum {string}
@@ -480,6 +485,12 @@ export interface components {
             product_id: string;
             /** Product Name */
             product_name: string;
+        };
+        /** Missing */
+        Missing: {
+            /** Reason */
+            reason: string;
+            signal: components["schemas"]["SignalKind"];
         };
         /**
          * Mode
@@ -796,6 +807,28 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * Reading
+         * @description What one signal says, and on what basis.
+         */
+        Reading: {
+            /** Basis */
+            basis: string;
+            /**
+             * Change
+             * @default null
+             */
+            change: number | null;
+            direction: components["schemas"]["Direction"];
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            signal: components["schemas"]["SignalKind"];
+            /** Source */
+            source: string;
+        };
         /** RejectedCandidate */
         RejectedCandidate: {
             /** Name */
@@ -959,6 +992,11 @@ export interface components {
          * @enum {string}
          */
         Sentiment: "positive" | "neutral" | "mixed" | "negative";
+        /**
+         * SignalKind
+         * @enum {string}
+         */
+        SignalKind: "search_interest" | "downloads" | "rating_count" | "review_volume";
         /** StageOutputView */
         StageOutputView: {
             /** Edited */
@@ -1094,6 +1132,28 @@ export interface components {
              * @constant
              */
             schema_version: 1;
+        };
+        /** TractionScore */
+        TractionScore: {
+            /** Confidence */
+            confidence: ("medium" | "low") | null;
+            label: components["schemas"]["Direction"] | null;
+            /** Missing */
+            missing: components["schemas"]["Missing"][];
+            /** Note */
+            note: string;
+            /** Product Id */
+            product_id: string;
+            /** Readings */
+            readings: components["schemas"]["Reading"][];
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Sources */
+            sources: string[];
         };
         /**
          * Trend

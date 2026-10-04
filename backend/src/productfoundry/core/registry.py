@@ -11,6 +11,7 @@ from productfoundry.core.reviews import ReviewSet
 from productfoundry.core.roadmap import Roadmap
 from productfoundry.core.run_input import RunInput
 from productfoundry.core.tasks import TaskPlan
+from productfoundry.core.traction import TractionScore
 
 SCHEMAS: dict[str, type[BaseModel]] = {
     model.__name__: model
@@ -24,5 +25,6 @@ SCHEMAS: dict[str, type[BaseModel]] = {
         Roadmap,
         AcceptanceCriteria,
         PricingSnapshot,
+        TractionScore,
     )
 }

@@ -366,3 +366,34 @@ def changelog_alerts(run: RunRecord, store):
 
     competitors, report, prd = run_plan(run)
     return run_alerts(run.id, competitors, report, prd, store)
+
+
+def traction_sources() -> tuple:
+    """Google Trends and the store figures: (search interest, store stats by store)."""
+    from productfoundry.sources.robots import Robots
+    from productfoundry.sources.trends import AppStoreStats, GooglePlayStats, GoogleTrends
+
+    return GoogleTrends(), {"google_play": GooglePlayStats(Robots()), "app_store": AppStoreStats()}
+
+
+def traction_collect(sessions, target=None):
+    """Collect the signals of one product, or of every product collected before."""
+    from productfoundry import storage
+    from productfoundry.market.traction import collect, collect_tracked
+
+    interest, stats = traction_sources()
+    store = storage.TractionRepository(sessions)
+    if target is None:
+        return collect_tracked(interest=interest, stats=stats, store=store)
+    return collect(target, interest=interest, stats=stats, store=store)
+
+
+def traction_score(sessions, product_id: str):
+    from productfoundry import storage
+    from productfoundry.market.traction import score_product
+
+    return score_product(
+        product_id,
+        store=storage.TractionRepository(sessions),
+        reviews=storage.ReviewRepository(sessions),
+    )

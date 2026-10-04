@@ -16,6 +16,7 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "pydantic>=2.7",
     "pydantic-settings>=2.4",
+    "pytrends>=4.9",
     "redis>=5.0",
     "rq>=2.0",
     "scikit-learn>=1.5",

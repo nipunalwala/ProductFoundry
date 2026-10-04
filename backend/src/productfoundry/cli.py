@@ -187,6 +187,23 @@ def build_parser() -> argparse.ArgumentParser:
     alerts.add_argument("--format", choices=["text", "json"], default="text")
     changelog.set_defaults(handler=_cmd_changelog)
 
+    traction = commands.add_parser("traction", help="is a product growing, flat or declining?")
+    actions = traction.add_subparsers(dest="action", required=True)
+    collect = actions.add_parser("collect", help="read a product's public signals and store them")
+    collect.add_argument("--term", help="search term for Google Trends (default: the name)")
+    collect.add_argument("--region", help="country code for the search interest (default: all)")
+    collect.add_argument("--no-trends", action="store_true", help="skip Google Trends")
+    collect.add_argument("--google-play", metavar="ID", help="the Google Play package name")
+    collect.add_argument("--app-store", metavar="ID", help="the App Store track id")
+    score = actions.add_parser("score", help="print the label and its reasons (no request)")
+    score.add_argument("--format", choices=["text", "json"], default="text")
+    for action in (collect, score):
+        action.add_argument("--product", required=True, metavar="NAME")
+        action.add_argument(
+            "--run", metavar="RUN_ID", help="take the product's id and store ids from this run"
+        )
+    traction.set_defaults(handler=_cmd_traction)
+
     schema = commands.add_parser("schema", help="export the JSON Schema of the contracts")
     schema.add_argument("name", nargs="?", choices=sorted(SCHEMAS), help="print one schema")
     schema.add_argument("--out", type=Path, help="write every schema to this directory")
@@ -557,6 +574,41 @@ def _cmd_changelog(args: argparse.Namespace) -> int:
             print(alerts.model_dump_json(indent=2))
         else:
             print(render_alerts(alerts))
+    return 0
+
+
+def _cmd_traction(args: argparse.Namespace) -> int:
+    from productfoundry.core.traction import TractionTarget
+    from productfoundry.market.traction import render_score
+
+    if args.memory:
+        raise ProductFoundryError("traction signals are kept in the database, not with --memory")
+    with _open_store(args) as store:
+        product, name = _pricing_product(args, store)
+        if args.action == "collect":
+            store_ids = {"google_play": args.google_play, "app_store": args.app_store}
+            if args.run is not None:
+                output = runtime.stage_output(store.get(args.run), "s1_competitors", "competitors")
+                known = next(c for c in output["competitors"] if c["id"] == product)["store_ids"]
+                store_ids = {key: store_ids[key] or known.get(key) for key in store_ids}
+            target = TractionTarget(
+                product_id=product,
+                name=name,
+                term=None if args.no_trends else (args.term or name),
+                region=args.region,
+                store_ids={key: value for key, value in store_ids.items() if value},
+            )
+            collected = runtime.traction_collect(args.sessions, target)
+            for observation in collected.observations:
+                print(f"{observation.signal}: {observation.value:,.0f}  ({observation.source})")
+            for reason in collected.skipped:
+                print(f"skipped: {reason}")
+            print(f"{collected.requests} request(s) made")
+        result = runtime.traction_score(args.sessions, product)
+        if getattr(args, "format", "text") == "json":
+            print(result.model_dump_json(indent=2))
+        else:
+            print(render_score(result, name))
     return 0
 
 

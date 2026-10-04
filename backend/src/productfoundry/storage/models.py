@@ -217,3 +217,17 @@ class ChangelogMatchRow(Base):
     )
     match: Mapped[dict[str, Any]]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class TractionSignalRow(Base):
+    """What one source showed about a product's size or interest at one moment."""
+
+    __tablename__ = "traction_signals"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"), index=True)
+    signal: Mapped[str]
+    value: Mapped[float]
+    source: Mapped[str]
+    observed_at: Mapped[datetime] = mapped_column(index=True)
+    detail: Mapped[dict[str, Any]] = mapped_column(server_default=text("'{}'::jsonb"))

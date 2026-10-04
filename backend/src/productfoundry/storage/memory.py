@@ -8,6 +8,7 @@ from productfoundry.core.clusters import Cluster
 from productfoundry.core.competitors import Competitor
 from productfoundry.core.pricing import PricingAlert, PricingSnapshot, TrackedPage
 from productfoundry.core.reviews import ANALYSED_LANGUAGES, Review, ReviewSourceName, Sentiment
+from productfoundry.core.traction import Observation, SignalKind, TractionTarget, targets_from
 
 
 class InMemoryClusterStore:
@@ -175,3 +176,21 @@ class InMemoryChangelogStore:
 
     def clear_matches(self, run_id: str) -> None:
         self._matches.pop(run_id, None)
+
+
+class InMemoryTractionStore:
+    def __init__(self) -> None:
+        self._observations: list[Observation] = []
+        self._names: dict[str, str] = {}
+
+    def add(self, observations: Sequence[Observation], product_name: str) -> None:
+        self._observations.extend(observations)
+        for observation in observations:
+            self._names.setdefault(observation.product_id, product_name)
+
+    def history(self, product_id: str, signal: SignalKind) -> list[Observation]:
+        found = [o for o in self._observations if o.product_id == product_id and o.signal is signal]
+        return sorted(found, key=lambda observation: observation.observed_at)
+
+    def targets(self) -> list[TractionTarget]:
+        return targets_from(self._observations, self._names)

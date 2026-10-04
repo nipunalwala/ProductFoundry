@@ -118,7 +118,8 @@ def next_pricing_refresh(now: datetime) -> datetime:
 
 def refresh_tracked_pricing() -> dict[str, int]:
     """The weekly job: snapshot every tracked pricing page, collect the release items of
-    every tracked source, then schedule the next pass."""
+    every tracked source and the traction signals of every product collected before, then
+    schedule the next pass."""
     from productfoundry import runtime, storage
 
     settings = Settings()
@@ -128,6 +129,7 @@ def refresh_tracked_pricing() -> dict[str, int]:
         sessions = storage.make_sessions(engine)
         outcomes = runtime.pricing_refresh(sessions)
         releases = runtime.changelog_collect(sessions)
+        traction = runtime.traction_collect(sessions)
     finally:
         engine.dispose()
     counts = pricing_counts(outcomes)
@@ -151,6 +153,14 @@ def refresh_tracked_pricing() -> dict[str, int]:
                 outcome.source.target,
                 outcome.skipped,
             )
+    log.info(
+        "traction: %d product(s), %d signal(s) stored",
+        len(traction),
+        sum(len(collected.observations) for collected in traction.values()),
+    )
+    for product, collected in traction.items():
+        for reason in collected.skipped:
+            log.warning("traction signal of %s was skipped: %s", product, reason)
     schedule_pricing_refresh(settings.redis_url)
     return counts
 

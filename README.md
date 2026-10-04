@@ -122,6 +122,21 @@ pain points and PRD, and prints two kinds of alert: a competitor shipped a fix
 for a pain point the run targets, or shipped a feature the PRD does not cover.
 `GET /runs/{id}/changelog` returns the same alerts.
 
+### Traction
+
+```
+py -m uv run productfoundry traction collect --product NAME [--run RUN_ID] [--term TERM] \
+    [--region IN] [--google-play ID] [--app-store ID] [--no-trends]
+py -m uv run productfoundry traction score --product NAME [--run RUN_ID] [--format json]
+```
+
+`collect` reads Google Trends (relative search interest) and the stores' install
+range and rating counts, stores each with its source and date, and prints the
+score. `score` prints it again from what is stored: growing, flat or declining,
+a confidence that is never above medium, the basis of each signal, and the
+signals that are missing. The store signals need a few weeks of history; the
+worker collects them again every Monday.
+
 ## API and worker
 
 ```

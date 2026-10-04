@@ -14,6 +14,7 @@ from productfoundry.storage.llm import PostgresCallStore, PostgresUsageStore
 from productfoundry.storage.pricing import PricingAlertRepository, PricingRepository
 from productfoundry.storage.reviews import ReviewRepository
 from productfoundry.storage.run_store import PostgresRunStore
+from productfoundry.storage.traction import TractionRepository
 
 __all__ = [
     "ChangelogRepository",
@@ -26,6 +27,7 @@ __all__ = [
     "ReviewRepository",
     "Sessions",
     "StorageUnavailable",
+    "TractionRepository",
     "check_ready",
     "make_engine",
     "make_sessions",

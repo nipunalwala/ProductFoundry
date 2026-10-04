@@ -453,6 +453,15 @@
         "title": "CriterionKind",
         "type": "string"
       },
+      "Direction": {
+        "enum": [
+          "growing",
+          "flat",
+          "declining"
+        ],
+        "title": "Direction",
+        "type": "string"
+      },
       "Effort": {
         "description": "A fixed scale for one developer. Anything larger than XL is split into tasks.",
         "enum": [
@@ -691,6 +700,25 @@
           "fact"
         ],
         "title": "MarketGap",
+        "type": "object"
+      },
+      "Missing": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "signal": {
+            "$ref": "#/components/schemas/SignalKind"
+          }
+        },
+        "required": [
+          "signal",
+          "reason"
+        ],
+        "title": "Missing",
         "type": "object"
       },
       "Mode": {
@@ -1411,6 +1439,54 @@
         "title": "ProductReviewCounts",
         "type": "object"
       },
+      "Reading": {
+        "additionalProperties": false,
+        "description": "What one signal says, and on what basis.",
+        "properties": {
+          "basis": {
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Change"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/Direction"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "signal": {
+            "$ref": "#/components/schemas/SignalKind"
+          },
+          "source": {
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal",
+          "direction",
+          "basis",
+          "source",
+          "observed_at"
+        ],
+        "title": "Reading",
+        "type": "object"
+      },
       "RejectedCandidate": {
         "additionalProperties": false,
         "properties": {
@@ -1820,6 +1896,16 @@
           "negative"
         ],
         "title": "Sentiment",
+        "type": "string"
+      },
+      "SignalKind": {
+        "enum": [
+          "search_interest",
+          "downloads",
+          "rating_count",
+          "review_volume"
+        ],
+        "title": "SignalKind",
         "type": "string"
       },
       "StageOutputView": {
@@ -2246,6 +2332,85 @@
           "epics"
         ],
         "title": "TaskPlan",
+        "type": "object"
+      },
+      "TractionScore": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Direction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/Missing"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "note": {
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          },
+          "product_id": {
+            "pattern": "^prod_[A-Za-z0-9]+$",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "readings": {
+            "items": {
+              "$ref": "#/components/schemas/Reading"
+            },
+            "title": "Readings",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "product_id",
+          "label",
+          "confidence",
+          "readings",
+          "missing",
+          "sources",
+          "note"
+        ],
+        "title": "TractionScore",
         "type": "object"
       },
       "Trend": {
