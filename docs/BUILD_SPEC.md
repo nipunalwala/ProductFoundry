@@ -110,7 +110,7 @@ where the table says so.
 | 3 | LLM gateway | Done 2026-10-04. `productfoundry llm check` passed for all three providers (3 live calls: Gemini 20.1 s, Groq 0.9 s, OpenRouter 1.0 s). Models pinned in `llm/routing.toml` after looking them up: Gemini `gemini-3.8-flash`, Groq `openai/gpt-oss-120b` (free plan: 1,000 requests and 200K tokens a day, 8K tokens a minute), OpenRouter `nvidia/nemotron-3-super-120b-a12b:free` (50 requests a day until $10 of credit is bought). Google no longer publishes Gemini free-tier limits, so `requests_per_day = 250` for Gemini is a placeholder to correct from the AI Studio rate-limit page. Providers are asked for JSON mode with the JSON Schema appended to the prompt, and the gateway validates. The cache is the `response` column of `llm_calls` (migration `0002`); it is checked for every provider in the chain before any call. A provider with no key is passed over. `QuotaExhausted` is raised only when every provider was skipped for quota or answered 429; other failures raise `LlmFailed`, which fails the stage. A non-retryable error (401, 400) moves on without a retry. Tests build a `Gateway` with `FakeProvider` and in-memory stores from `llm/fakes.py`; `RecordingProvider` and `ReplayProvider` save and serve fixtures by task and prompt hash. A new task must be added to a group in `routing.toml` |
 | 4 | Stage 1: competitor research | Done 2026-10-04. Lint and 209 tests pass. Live run for Splitwise (region IN) returned 9 competitors, incumbent first; the list was shown to the owner. Live totals: 10 Tavily searches (the budget) and 6 LLM calls (one over the budget of 5: Gemini answered 503 "high demand" on all 4 attempts, Groq rejected one with HTTP 400 and answered the next), over two attempts, plus 2 requests to record store fixtures. The first attempt hung: OpenRouter keeps a queued request open with keep-alive bytes, which defeats the HTTP timeout, so `LiteLLMProvider` now enforces a total deadline. Provider errors now keep the start of the provider's message with the key removed. The live run also showed the Play lookup missing the right app when it was third in the results; it now tries results whose title matches first. The recorded search and LLM responses are fixtures and replay in a test; the hand-written fixtures stay for the merge and URL-check cases and say they are hand-written. The second attempt capped store lookups at 3 to hold the search budget, so some competitors in that run have no store ids. Google Play's robots.txt disallows `/store/search`, so a Play app is found by name through Tavily restricted to play.google.com and only its details page is read (see ARCHITECTURE.md section 12). A run makes at most 3 discovery searches plus one Play search per competitor looked up (incumbent and up to 6 others): 10 at most. Every kept competitor must cite a real search result, except the incumbent and the user's known competitors; a URL no result shows is dropped. Product ids are derived from the store id or the name (`core.ids.product_id`), so they are stable across runs. The CLI runs the real stage 1 and stand-ins for stages 2 and 3; `--fake-stages` makes every stage a stand-in. `approve` takes `--remove NAME`, `--add FILE` and `--edit FILE`. Stages get adapters through `Services` (`llm`, `search`, `app_lookups`). Phase 5 needed D8, now answered |
 | 5 | Stage 2: review collection | Done 2026-10-04. Lint and 264 tests pass. Live fetch for Splitwise (region IN, cap 200 per store): 192 reviews stored (96 Google Play, 96 App Store), 16 dropped as too short; 189 English, 2 Hinglish, 1 Devanagari Hindi (stored, not analysed); sentiment 99 negative, 53 positive, 29 mixed, 10 neutral. Requests: 2 to Google Play, 3 to the App Store feed (plus 4 earlier to check payload shapes), 6 LLM calls (5 answered by Groq, one 429 retried). They are in the database under product `prod_splitwise` for phase 7. Language detection on the 74-review fixture: 72 decided, all 72 correct, 2 borderline (sent to the LLM), no Hinglish labelled as another language. The fixture and the lexicon were written by the same hand, so this is optimistic; gate 1 is the real test. Splitwise has almost no Hinglish reviews, so D2 should include a product that does. Borderline reviews get their language from the same LLM call that gives the sentiment, so language costs no extra calls. Store fixtures keep the real field names but invented names and texts: no real review or reviewer is in the repository, so there is no recorded live sentiment fixture either. The gateway now paces calls to per-minute limits (`requests_per_minute`, `tokens_per_minute` in `routing.toml`). `Services` gained `reviews` (a `ReviewStore`) and `review_sources`. The cap is `--review-cap` on the CLI (default 2,000). Sentiment batches are 40 reviews. With `--memory`, reviews do not outlive the command |
-| 6 | Embeddings and clustering | Not started |
+| 6 | Embeddings and clustering | Done 2026-10-04. Lint and 284 tests pass. No live calls. **Model pinned: `intfloat/multilingual-e5-small`** (384 dimensions, prefix `query: `), with **per-language centring**, which the comparison showed is needed (see "Embedding model comparison" below, and ARCHITECTURE.md section 6.1). On the hand-written theme fixture (3 themes x 10 English + 10 Hinglish, 10 noise) the pinned setup gives exactly three clusters, each holding both languages; without centring every model split themes by language. Clustering the 192 live Splitwise reviews: 128 negative or mixed reviews, 4 clusters (71, 31, 18, 8), no noise, identical on a second run; the largest is the daily-expense paywall. Entry point for phase 7: `ml.pipeline.cluster_run(run_id, product_ids, reviews=, clusters=, embedder=, config=, seed=)`, which embeds what is missing, centres, clusters negative and mixed reviews, saves the clusters for the run and returns a `ClusteringResult` (`core/clusters.py`). Settings are in `ml/config.toml`. Migration `0003` fixes `reviews.embedding` at 384 dimensions, adds `reviews.embedding_model`, and replaces `cluster_reviews.representative` with `representative_rank`. Raw vectors are stored; centring is done per run. Models download once into the Hugging Face cache in the user profile; tests set `HF_HUB_OFFLINE=1` and skip the real-model tests when the model is not cached. Downloads through Python stalled on this network until `HF_HUB_DISABLE_XET=1` was set. `Services` does not yet carry the embedder or the cluster store: phase 7 adds them when stage 3 uses them |
 | 7 | Stage 3: pain-point report | Not started |
 | 8 | Gate 1: three test products | Not started |
 | 9 | Stage 4: PRD with citations | Not started |
@@ -133,6 +133,30 @@ where the table says so.
 | 26 | Revenue ranges (experimental) | Not started |
 | 27 | Evaluation harness | Not started |
 | 28 | Gate 4: full run on the evaluation set | Not started |
+
+### Embedding model comparison (phase 6, 2026-10-04)
+
+16 hand-written pairs, each the same complaint in English and in Hinglish
+(`tests/fixtures/paired_reviews.json`), scored by
+`backend/eval/embedding_models.py`. "Match" is the mean cosine similarity of a
+Hinglish review to its English twin; "unrelated" is to the other English
+reviews; "top-1" is how often the twin is the nearest English review; "margin"
+is the weakest twin minus the strongest wrong match.
+
+| Model | Vectors | Match | Unrelated | Separation | Top-1 | Margin |
+|---|---|---|---|---|---|---|
+| paraphrase-multilingual-MiniLM-L12-v2 (384) | raw | 0.368 | 0.059 | 0.310 | 0.94 | -0.369 |
+| | centred | 0.462 | -0.031 | 0.493 | 1.00 | -0.155 |
+| **multilingual-e5-small (384)** | raw | 0.849 | 0.785 | 0.063 | 1.00 | -0.053 |
+| | **centred** | 0.439 | -0.029 | 0.468 | 1.00 | **-0.046** |
+| paraphrase-multilingual-mpnet-base-v2 (768) | raw | 0.411 | 0.120 | 0.291 | 1.00 | -0.125 |
+| | centred | 0.469 | -0.031 | 0.500 | 1.00 | -0.058 |
+
+On raw vectors all three models clustered the theme fixture by language first.
+After centring, e5-small and mpnet-base recovered the three themes exactly, on
+every seed and parameter set tried; MiniLM still split one theme. e5-small was
+chosen over mpnet-base: the same result with the best worst-case margin, half
+the dimensions, and under half the download (about 470 MB against 1.1 GB).
 
 ---
 
@@ -925,6 +949,18 @@ Phases add items here instead of building them.
 - Stage 2: Apple's feed for the IN store returned no reviews on one request
   and 96 on the next, and they reach back to 2016. Treat App Store counts for
   small storefronts as unreliable (noted in phase 5).
+- Tests: the suite takes about 7 minutes on the development machine. UMAP
+  compiles for about 3 minutes in every new process (its parallel functions
+  cannot be cached), loading the embedding model takes about 1 minute, and
+  importing LiteLLM is slow. A `slow` marker would let the quick tests run
+  alone (noted in phase 6).
+- Clustering: a language with fewer than 10 reviews in a run is centred on the
+  overall mean, so a handful of Hinglish reviews among English ones can still
+  sit apart. A fixed language direction learned once from a larger sample
+  would cover that case (noted in phase 6).
+- Clustering: on the theme fixture the unrelated "noise" reviews were absorbed
+  into the nearest theme rather than left as noise. Watch the junk share at
+  gate 1 (noted in phase 6).
 - Stage 2: a store that fails stops the stage. A per-store warning in
   `ReviewSet` would let the run continue (noted in phase 5).
 - Gateway: daily usage is counted per UTC day, but Gemini's quota resets at

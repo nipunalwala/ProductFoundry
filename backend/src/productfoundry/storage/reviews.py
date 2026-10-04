@@ -1,11 +1,11 @@
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 
 from sqlalchemy import Select, func, literal_column, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from productfoundry.core.competitors import Competitor
-from productfoundry.core.reviews import Review, ReviewSourceName, Sentiment
+from productfoundry.core.reviews import ANALYSED_LANGUAGES, Review, ReviewSourceName, Sentiment
 from productfoundry.storage.db import Sessions
 from productfoundry.storage.models import ProductRow, ReviewRow
 
@@ -80,6 +80,40 @@ class ReviewRepository:
         with self._sessions.begin() as session:
             session.execute(update(ReviewRow), rows)
 
+    def without_embedding(self, product_ids: Sequence[str], model: str) -> list[Review]:
+        return self._fetch(
+            select(ReviewRow).where(
+                ReviewRow.product_id.in_(product_ids),
+                ReviewRow.language.in_(ANALYSED_LANGUAGES),
+                ReviewRow.embedding_model.is_distinct_from(model),
+            )
+        )
+
+    def set_embeddings(self, vectors: Mapping[str, Sequence[float]], model: str) -> None:
+        if not vectors:
+            return
+        rows = [
+            {"id": review_id, "embedding": list(vector), "embedding_model": model}
+            for review_id, vector in vectors.items()
+        ]
+        with self._sessions.begin() as session:
+            for start in range(0, len(rows), _CHUNK):
+                session.execute(update(ReviewRow), rows[start : start + _CHUNK])
+
+    def with_embeddings(
+        self, product_ids: Sequence[str], model: str
+    ) -> list[tuple[Review, list[float]]]:
+        statement = (
+            select(ReviewRow)
+            .where(ReviewRow.product_id.in_(product_ids), ReviewRow.embedding_model == model)
+            .order_by(ReviewRow.reviewed_at, ReviewRow.id)
+        )
+        with self._sessions() as session:
+            return [
+                (_review(row), [float(value) for value in row.embedding])
+                for row in session.scalars(statement)
+            ]
+
     def for_product(self, product_id: str) -> list[Review]:
         return self._fetch(select(ReviewRow).where(ReviewRow.product_id == product_id))
 
@@ -96,10 +130,11 @@ class ReviewRepository:
     def _fetch(self, statement: Select) -> list[Review]:
         statement = statement.order_by(ReviewRow.reviewed_at, ReviewRow.id)
         with self._sessions() as session:
-            return [
-                Review(
-                    **{column: getattr(row, column) for column in _COLUMNS}
-                    | {"reviewed_at": row.reviewed_at.astimezone(UTC)}
-                )
-                for row in session.scalars(statement)
-            ]
+            return [_review(row) for row in session.scalars(statement)]
+
+
+def _review(row: ReviewRow) -> Review:
+    return Review(
+        **{column: getattr(row, column) for column in _COLUMNS}
+        | {"reviewed_at": row.reviewed_at.astimezone(UTC)}
+    )

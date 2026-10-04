@@ -1,0 +1,21 @@
+{
+  "_note": "Hand-written. Each pair is the same complaint in English and in Hinglish. Used to choose the embedding model (phase 6): a good model puts each Hinglish review nearest to its own English twin.",
+  "pairs": [
+    {"topic": "payment_fails", "en": "The payment fails every time and the money still gets deducted.", "hinglish": "payment har baar fail ho jata hai aur paisa bhi kat jata hai"},
+    {"topic": "daily_limit", "en": "The free version only lets me add three expenses a day now.", "hinglish": "free version mein ab din mein sirf teen expense add kar sakte hai"},
+    {"topic": "too_many_ads", "en": "There are far too many ads, one before every single action.", "hinglish": "bahut zyada ads aate hai, har kaam se pehle ek ad dekhna padta hai"},
+    {"topic": "login_otp", "en": "I cannot log in because the OTP never arrives.", "hinglish": "OTP aata hi nahi hai isliye login nahi ho raha"},
+    {"topic": "crash_after_update", "en": "After the latest update the app crashes as soon as I open it.", "hinglish": "naye update ke baad app kholte hi band ho jata hai"},
+    {"topic": "support_no_reply", "en": "Customer support never replies to my emails.", "hinglish": "customer care wale mere email ka koi jawab nahi dete"},
+    {"topic": "refund_pending", "en": "My refund has been pending for two weeks.", "hinglish": "mera refund do hafte se pending hai, abhi tak nahi aaya"},
+    {"topic": "too_expensive", "en": "The subscription is too expensive for students.", "hinglish": "subscription students ke liye bahut mehenga hai"},
+    {"topic": "slow_app", "en": "The app is very slow and takes ages to load.", "hinglish": "app bahut slow hai, load hone mein bahut time lagta hai"},
+    {"topic": "notifications_late", "en": "Notifications arrive hours late.", "hinglish": "notification ghanto baad aata hai, time pe nahi aata"},
+    {"topic": "wrong_balance", "en": "The balances are calculated wrongly after someone edits an expense.", "hinglish": "expense edit karne ke baad balance galat dikhata hai"},
+    {"topic": "account_blocked", "en": "My account was blocked without any reason.", "hinglish": "mera account bina kisi wajah ke block kar diya"},
+    {"topic": "export_paywalled", "en": "Exporting my data to a spreadsheet now needs a paid plan.", "hinglish": "data excel mein export karne ke liye ab paise dene padte hai"},
+    {"topic": "praise_easy", "en": "Very easy to use, splitting bills with friends takes seconds.", "hinglish": "use karna bahut easy hai, dosto ke saath bill split karna second ka kaam hai"},
+    {"topic": "battery_drain", "en": "This app drains my phone battery very quickly.", "hinglish": "ye app phone ki battery bahut jaldi khatam kar deta hai"},
+    {"topic": "sync_lost", "en": "Expenses I added offline disappeared after syncing.", "hinglish": "offline add kiye hue expense sync ke baad gayab ho gaye"}
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "_note": "Hand-written. Three obvious complaint themes, each in English and in Hinglish, plus unrelated reviews as noise. Used to check that clustering recovers the themes and does not split them by language.",
+  "themes": {
+    "payment": {
+      "en": [
+        "Payment failed but the money was deducted from my bank account.",
+        "My payment keeps failing and the amount is still debited.",
+        "Money got deducted twice for a single payment.",
+        "The transaction failed and I have not received my money back.",
+        "Paid through UPI, payment shows failed but the amount was debited.",
+        "Every payment I try fails and my account gets charged anyway.",
+        "Amount debited from my bank but the payment is shown as failed.",
+        "Payment failure again, the money is gone and nothing was settled.",
+        "The payment did not go through yet my bank shows the money deducted.",
+        "Transaction failed three times and the money was taken each time."
+      ],
+      "hinglish": [
+        "payment fail ho gaya lekin paisa bank se kat gaya",
+        "paisa kat gaya aur payment fail dikha raha hai",
+        "ek payment ke liye do baar paisa kat gaya",
+        "transaction fail ho gaya aur paisa wapas nahi aaya",
+        "UPI se payment kiya, fail dikha raha hai lekin paise kat gaye",
+        "har baar payment fail hota hai aur account se paisa kat jata hai",
+        "bank se amount debit ho gaya par payment failed dikha raha hai",
+        "phir se payment fail, paisa bhi gaya aur settle bhi nahi hua",
+        "payment hua nahi lekin bank mein paisa kata hua dikha raha hai",
+        "teen baar transaction fail hua aur teeno baar paisa kat gaya"
+      ]
+    },
+    "ads": {
+      "en": [
+        "There are way too many ads in this app now.",
+        "A full screen ad pops up after every single tap.",
+        "Ads everywhere, I cannot use the app without watching videos.",
+        "Too many advertisements, it has become unusable.",
+        "I have to watch a video ad before adding each expense.",
+        "The ads are so frequent that the app is annoying to use.",
+        "Constant ads interrupt whatever I am doing in the app.",
+        "Every screen has a banner ad and a popup ad on top.",
+        "The number of ads has doubled since the last update.",
+        "Please reduce the ads, there is one after every action."
+      ],
+      "hinglish": [
+        "is app mein ab bahut zyada ads aate hai",
+        "har tap ke baad full screen ad aa jata hai",
+        "har jagah ads hai, video dekhe bina app use nahi kar sakte",
+        "itne zyada advertisement hai ki app use karna mushkil hai",
+        "har expense add karne se pehle video ad dekhna padta hai",
+        "ads itne baar aate hai ki app se chidh ho gayi hai",
+        "kuch bhi karo beech mein ad aa jata hai",
+        "har screen pe banner ad aur upar se popup ad",
+        "pichle update ke baad ads double ho gaye hai",
+        "ads kam karo yaar, har kaam ke baad ek ad aata hai"
+      ]
+    },
+    "login": {
+      "en": [
+        "I cannot log in because the OTP never arrives.",
+        "The verification code is not sent to my phone number.",
+        "Login is broken, I never receive the OTP message.",
+        "Waiting for the OTP for an hour, still cannot sign in.",
+        "The app logs me out and then the OTP does not come.",
+        "Cannot sign in, the one time password SMS never shows up.",
+        "OTP not received on my number so I am locked out of my account.",
+        "Sign in fails every time because no verification code is sent.",
+        "I requested the login OTP five times and got nothing.",
+        "Unable to log in to my account, the OTP SMS is never delivered."
+      ],
+      "hinglish": [
+        "OTP aata hi nahi hai isliye login nahi ho raha",
+        "verification code mere number pe nahi aa raha",
+        "login nahi ho raha, OTP ka message aata hi nahi",
+        "ek ghante se OTP ka wait kar raha hu, sign in nahi ho raha",
+        "app logout kar deta hai aur phir OTP nahi aata",
+        "sign in nahi ho raha, OTP wala SMS aata hi nahi",
+        "mere number pe OTP nahi aaya, account mein ghus nahi pa raha",
+        "har baar sign in fail, verification code bheja hi nahi jata",
+        "paanch baar login OTP manga, ek baar bhi nahi aaya",
+        "account mein login nahi ho pa raha, OTP SMS deliver nahi hota"
+      ]
+    }
+  },
+  "noise": [
+    "The dark mode colours are hard on the eyes at night.",
+    "Please add a widget for the home screen.",
+    "The font size is too small on my tablet.",
+    "It would be nice to have a Tamil language option.",
+    "My flatmate left the group and the group name disappeared.",
+    "The app icon looks outdated compared to other apps.",
+    "Exported spreadsheet has the columns in a strange order.",
+    "Battery drains quickly when the app runs in the background.",
+    "currency conversion ka rate purana dikha raha hai",
+    "group ka photo change karne ka option nahi mil raha"
+  ]
+}

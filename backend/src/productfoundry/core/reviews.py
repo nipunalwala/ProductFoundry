@@ -1,6 +1,6 @@
 """Stage 2 output: review counts. The reviews themselves are database rows."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal, Protocol
@@ -64,6 +64,18 @@ class ReviewStore(Protocol):
 
     def set_analysis(self, analysis: Mapping[str, tuple[str, Sentiment | None]]) -> None:
         """Set (language, sentiment) by review id."""
+        ...
+
+    def without_embedding(self, product_ids: Sequence[str], model: str) -> list["Review"]:
+        """Analysed reviews of these products that have no vector from this model."""
+        ...
+
+    def set_embeddings(self, vectors: Mapping[str, Sequence[float]], model: str) -> None: ...
+
+    def with_embeddings(
+        self, product_ids: Sequence[str], model: str
+    ) -> list[tuple["Review", list[float]]]:
+        """Reviews of these products with their vector from this model."""
         ...
 
 

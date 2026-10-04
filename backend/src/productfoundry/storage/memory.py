@@ -1,16 +1,29 @@
-"""An in-memory `ReviewStore` for tests and `--memory` runs. Nothing survives the process."""
+"""In-memory stores for tests and `--memory` runs. Nothing survives the process."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
 
+from productfoundry.core.clusters import Cluster
 from productfoundry.core.competitors import Competitor
-from productfoundry.core.reviews import Review, ReviewSourceName, Sentiment
+from productfoundry.core.reviews import ANALYSED_LANGUAGES, Review, ReviewSourceName, Sentiment
+
+
+class InMemoryClusterStore:
+    def __init__(self) -> None:
+        self._clusters: dict[str, list[Cluster]] = {}
+
+    def save(self, run_id: str, clusters: Sequence[Cluster]) -> None:
+        self._clusters[run_id] = list(clusters)
+
+    def for_run(self, run_id: str) -> list[Cluster]:
+        return list(self._clusters.get(run_id, []))
 
 
 class InMemoryReviewStore:
     def __init__(self) -> None:
         self._products: dict[str, Competitor] = {}
         self._reviews: dict[tuple[str, str], Review] = {}
+        self._vectors: dict[str, tuple[str, list[float]]] = {}  # review id -> (model, vector)
 
     def ensure_product(self, competitor: Competitor) -> str:
         for product_id, known in self._products.items():
@@ -49,6 +62,29 @@ class InMemoryReviewStore:
                 refreshed = review.model_dump(include={"url", "reviewed_at", "rating", "text"})
                 self._reviews[key] = known.model_copy(update=refreshed)
         return new
+
+    def without_embedding(self, product_ids: Sequence[str], model: str) -> list[Review]:
+        return [
+            review
+            for product_id in product_ids
+            for review in self.for_product(product_id)
+            if review.language in ANALYSED_LANGUAGES
+            and self._vectors.get(review.id, (None, None))[0] != model
+        ]
+
+    def set_embeddings(self, vectors: Mapping[str, Sequence[float]], model: str) -> None:
+        for review_id, vector in vectors.items():
+            self._vectors[review_id] = (model, [float(value) for value in vector])
+
+    def with_embeddings(
+        self, product_ids: Sequence[str], model: str
+    ) -> list[tuple[Review, list[float]]]:
+        return [
+            (review, self._vectors[review.id][1])
+            for product_id in product_ids
+            for review in self.for_product(product_id)
+            if self._vectors.get(review.id, (None, None))[0] == model
+        ]
 
     def set_analysis(self, analysis: Mapping[str, tuple[str, Sentiment | None]]) -> None:
         for key, review in self._reviews.items():

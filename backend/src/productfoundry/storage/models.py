@@ -94,8 +94,10 @@ class ReviewRow(Base):
     language: Mapped[str | None]
     sentiment: Mapped[str | None]
     text: Mapped[str]
-    # The dimension is fixed when the embedding model is pinned (phase 6).
-    embedding: Mapped[Any | None] = mapped_column(Vector())
+    # The dimension of the model pinned in ml/config.toml. The raw vector is stored;
+    # per-language centring happens at clustering time.
+    embedding: Mapped[Any | None] = mapped_column(Vector(384))
+    embedding_model: Mapped[str | None]
     fetched_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
@@ -116,7 +118,8 @@ class ClusterReviewRow(Base):
         ForeignKey("clusters.id", ondelete="CASCADE"), primary_key=True
     )
     review_id: Mapped[str] = mapped_column(ForeignKey("reviews.id"), primary_key=True, index=True)
-    representative: Mapped[bool] = mapped_column(server_default=text("false"))
+    # Position among the cluster's representative reviews, nearest first. Null for the rest.
+    representative_rank: Mapped[int | None] = mapped_column(SmallInteger)
 
 
 class LlmCallRow(Base):

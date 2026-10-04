@@ -1,5 +1,6 @@
 """SQLAlchemy models, repositories and Alembic migrations. Nothing else imports SQLAlchemy."""
 
+from productfoundry.storage.clusters import PostgresClusterStore
 from productfoundry.storage.db import (
     Sessions,
     StorageUnavailable,
@@ -14,6 +15,7 @@ from productfoundry.storage.run_store import PostgresRunStore
 
 __all__ = [
     "PostgresCallStore",
+    "PostgresClusterStore",
     "PostgresUsageStore",
     "PostgresRunStore",
     "ReviewRepository",

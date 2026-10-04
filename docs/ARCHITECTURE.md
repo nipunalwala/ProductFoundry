@@ -162,7 +162,11 @@ jata hai"). This shapes four things:
   only for borderline cases).
 - **Embeddings.** The model must be multilingual and must place a Hinglish
   review near an English review of the same complaint. This is tested before
-  the model is pinned.
+  the model is pinned. No candidate did this on its raw vectors: each encodes
+  the language of a text as well as its meaning, so clusters formed by
+  language first. The pipeline therefore subtracts each language's mean vector
+  from that language's reviews before clustering (per-language centring),
+  using the language stage 2 stored. Raw vectors are what the database keeps.
 - **LLM tasks.** Sentiment, labelling and switching-intent prompts state that
   input may be Hinglish. Labels and descriptions are always written in English.
 - **Quotes.** A Hinglish quote is shown in its original words with a short

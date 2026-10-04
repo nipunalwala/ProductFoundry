@@ -63,7 +63,7 @@ def test_reviews_have_no_place_for_a_username():
     columns = set(ReviewRow.__table__.columns.keys())
     assert columns == {
         "id", "product_id", "source", "source_review_id", "url", "reviewed_at", "rating",
-        "language", "sentiment", "text", "embedding", "fetched_at",
+        "language", "sentiment", "text", "embedding", "embedding_model", "fetched_at",
     }  # fmt: skip
     with pytest.raises(ValidationError, match="username"):
         Review.model_validate(review(1).model_dump() | {"username": "someone"})

@@ -1,3 +1,8 @@
+import os
+
+# Tests never download a model: the embedding tests skip when it is not cached.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+
 import pytest
 
 from productfoundry.core.run_input import RunInput

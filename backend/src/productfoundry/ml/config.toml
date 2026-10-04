@@ -1,0 +1,22 @@
+# Embedding and clustering settings. Stage 3 reads these; the run's seed comes from the run.
+
+[embeddings]
+# Chosen in phase 6 by comparing candidates on English/Hinglish pairs
+# (backend/eval/embedding_models.py; scores in docs/BUILD_SPEC.md).
+model = "intfloat/multilingual-e5-small"
+dimension = 384
+batch_size = 32
+prefix = "query: "        # this model expects it before each text
+
+[clustering]
+umap_neighbors = 15
+umap_components = 5
+umap_metric = "cosine"
+min_cluster_size = 8      # fewer reviews than this cannot form a cluster
+min_samples = 3
+representatives = 5       # sample reviews kept per cluster
+# Multilingual models place a Hinglish review nearer to other Hinglish reviews
+# than to an English review of the same complaint. Subtracting each language's
+# mean vector removes that offset. A language with fewer reviews than this
+# shares the mean of all reviews instead, because its own mean would be noise.
+min_language_group = 10
