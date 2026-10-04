@@ -1,8 +1,13 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, Literal, Protocol, TypedDict
+from typing import Any, Literal, Protocol, TypedDict, TypeVar
+
+from pydantic import BaseModel
 
 from productfoundry.core.errors import ProductFoundryError
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class Message(TypedDict):
@@ -75,6 +80,12 @@ class UsageStore(Protocol):
         ...
 
     def add(self, provider: str, day: date, requests: int, tokens: int) -> None: ...
+
+
+class Completer(Protocol):
+    """What a stage sees of the gateway: a task name in, a validated object out."""
+
+    def complete(self, task: str, messages: Sequence[Message], schema: type[T]) -> T: ...
 
 
 class LlmFailed(ProductFoundryError):

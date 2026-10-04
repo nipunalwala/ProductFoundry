@@ -203,9 +203,9 @@ planned; until then this is stated in the UI and the README.
 
 | Source | Data | Access | Built in |
 |---|---|---|---|
-| Google Play | Reviews, ratings, download ranges | Public pages via a scraper library | Milestone 1 |
-| Apple App Store | Reviews, ratings | Public RSS feeds and pages | Milestone 1 |
-| Web search | Candidate competitors | An official search API (provider to be chosen) | Milestone 1 |
+| Google Play | Reviews, ratings, download ranges | Public pages via a scraper library. Only the app details page is read so far; review access is open (BUILD_SPEC.md D8) | Milestone 1 |
+| Apple App Store | Reviews, ratings | Lookup: Apple's iTunes Search API. Reviews: public RSS feeds, access open (BUILD_SPEC.md D8) | Milestone 1 |
+| Web search | Candidate competitors, and the Play id of an app by name | Tavily Search API | Milestone 1 |
 | Reddit | Discussions and complaints | Official API | Milestone 2 |
 | Product Hunt | Launches and comments | Official API | Milestone 2 |
 | Company websites | Pricing, features, changelogs | Headless browser, after checking robots.txt | Milestone 3 |
@@ -289,6 +289,8 @@ Targets start loose and tighten once a baseline exists.
 | Build order of stages 6 and 7 | 7 before 6 | The roadmap puts acceptance criteria in milestone 2 and RICE in milestone 4 |
 | Reddit and Product Hunt | Milestone 2, not milestone 1 | The roadmap lists only Play and App Store reviews for the MVP |
 | LLM providers | Free providers only, behind LiteLLM | The architecture diagram says "free + paid"; paid models arrive only with bring-your-own-key |
+| Web search API | Tavily (owner's decision D1, 2026-10-04) | Official API with a recurring free tier and no card |
+| Finding a Play app by name | Through the web search API restricted to play.google.com, then the app's details page | Play's robots.txt disallows `/store/search`; the details page is allowed |
 | Review languages | English and Hinglish from the MVP (owner's decision, 2026-10-04). Other languages, including Hindi in Devanagari, are stored and flagged but not analysed | India-specific insight is a stated differentiator, and many Indian app reviews are Hinglish. See section 6.1 |
 
 ## 13. Open questions
@@ -299,6 +301,7 @@ BUILD_SPEC.md.
 - Research or PRD-to-execution: which half to polish first?
 - Personal tool, portfolio project or product to sell? Decides how much UI and
   multi-user support to build.
-- Which web search API for competitor discovery?
 - Which traffic-estimate provider fits the budget, if any?
 - Which 3 products are the first test set, and which 10 form the evaluation set?
+- How are store reviews collected, given that the stores' robots.txt files
+  disallow the review endpoints (BUILD_SPEC.md D8)?

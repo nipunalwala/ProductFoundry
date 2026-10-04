@@ -12,7 +12,14 @@ from productfoundry.core.base import schema_version_of
 from productfoundry.core.errors import ProductFoundryError
 from productfoundry.core.registry import SCHEMAS
 from productfoundry.core.run_input import RunInput
-from productfoundry.orchestrator import InMemoryRunStore, Orchestrator, RunRecord, RunStore
+from productfoundry.orchestrator import (
+    InMemoryRunStore,
+    Orchestrator,
+    RunRecord,
+    RunStore,
+    Services,
+)
+from productfoundry.orchestrator.checkpoints import edit_competitors
 from productfoundry.stages.fakes import FAKE_STAGES
 
 DEFAULT_STATE_FILE = Path(".productfoundry") / "runs.json"
@@ -35,6 +42,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_STATE_FILE,
         help="where --memory keeps runs between commands (default: %(default)s)",
     )
+    parser.add_argument(
+        "--fake-stages",
+        action="store_true",
+        help="run every stage as a stand-in: no search, store or LLM request is made",
+    )
     commands = parser.add_subparsers(dest="command")
 
     run = commands.add_parser("run", help="start a run from a RunInput JSON file")
@@ -50,6 +62,16 @@ def build_parser() -> argparse.ArgumentParser:
     approve = commands.add_parser("approve", help="approve the checkpoint and continue the run")
     approve.add_argument("run_id")
     approve.add_argument("--edit", type=Path, help="JSON file that replaces the stage output")
+    approve.add_argument(
+        "--remove",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="competitor checkpoint: drop this competitor (repeatable)",
+    )
+    approve.add_argument(
+        "--add", type=Path, help="competitor checkpoint: JSON file with a list of competitors"
+    )
     approve.set_defaults(handler=_cmd_approve)
 
     resume = commands.add_parser("resume", help="continue a paused or failed run")
@@ -91,6 +113,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 @contextmanager
 def _open_store(args: argparse.Namespace) -> Iterator[RunStore]:
     """The Postgres store, or with --memory the in-memory one kept in the state file."""
+    args.sessions = None
     if not args.memory:
         # Imported here so --memory and `schema` work without a database driver in use.
         from productfoundry import storage
@@ -98,7 +121,8 @@ def _open_store(args: argparse.Namespace) -> Iterator[RunStore]:
         engine = storage.make_engine()
         try:
             storage.check_ready(engine)
-            yield storage.PostgresRunStore(storage.make_sessions(engine))
+            args.sessions = storage.make_sessions(engine)
+            yield storage.PostgresRunStore(args.sessions)
         finally:
             engine.dispose()
         return
@@ -115,8 +139,40 @@ def _open_store(args: argparse.Namespace) -> Iterator[RunStore]:
         path.write_text(store.dump_json(), encoding="utf-8")
 
 
-def _orchestrator(store: RunStore) -> Orchestrator:
-    return Orchestrator(store, FAKE_STAGES)
+def _orchestrator(args: argparse.Namespace, store: RunStore) -> Orchestrator:
+    """Real stages where they exist, stand-ins for the rest. Call inside `_open_store`."""
+    if args.fake_stages:
+        return Orchestrator(store, FAKE_STAGES)
+    from productfoundry.stages.s1_competitors import competitors_stage
+
+    stages = FAKE_STAGES | {"s1_competitors": competitors_stage}
+    return Orchestrator(store, stages, services=_services(args))
+
+
+def _services(args: argparse.Namespace) -> Services:
+    from productfoundry import llm, storage
+    from productfoundry.llm.fakes import InMemoryCallStore, InMemoryUsageStore
+    from productfoundry.settings import Settings
+    from productfoundry.sources.app_store import AppStoreLookup
+    from productfoundry.sources.google_play import GooglePlayLookup
+    from productfoundry.sources.robots import Robots
+    from productfoundry.sources.search.tavily import TavilySearch
+
+    settings = Settings()
+    routing = llm.load_routing()
+    if args.sessions is not None:
+        calls = storage.PostgresCallStore(args.sessions)
+        usage = storage.PostgresUsageStore(args.sessions)
+    else:
+        calls, usage = InMemoryCallStore(), InMemoryUsageStore()
+    gateway = llm.Gateway(routing, llm.live_providers(routing, settings), calls, usage)
+
+    search = None
+    lookups = {"app_store": AppStoreLookup()}
+    if settings.tavily_api_key and settings.tavily_api_key.get_secret_value():
+        search = TavilySearch(settings.tavily_api_key.get_secret_value())
+        lookups["google_play"] = GooglePlayLookup(search, Robots())
+    return Services(llm=gateway, search=search, app_lookups=lookups)
 
 
 def _read_json(path: Path) -> object:
@@ -134,7 +190,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     except ValidationError as exc:
         raise ProductFoundryError(f"invalid run input in {args.input}:\n{exc}") from exc
     with _open_store(args) as store:
-        orchestrator = _orchestrator(store)
+        orchestrator = _orchestrator(args, store)
         run = orchestrator.create_run(run_input, seed=args.seed)
         run = orchestrator.resume(run.id)
     _print_run(run)
@@ -166,8 +222,18 @@ def _cmd_status(args: argparse.Namespace) -> int:
 
 def _cmd_approve(args: argparse.Namespace) -> int:
     edited = _read_json(args.edit) if args.edit else None
+    added = _read_json(args.add) if args.add else []
     with _open_store(args) as store:
-        orchestrator = _orchestrator(store)
+        orchestrator = _orchestrator(args, store)
+        if args.remove or added:
+            if edited is not None:
+                raise ProductFoundryError("use --edit alone, or --remove and --add")
+            if not isinstance(added, list):
+                raise ProductFoundryError(f"{args.add} must hold a JSON list of competitors")
+            stage = store.get(args.run_id).stage("s1_competitors")
+            if stage.status != "awaiting_approval":
+                raise ProductFoundryError("--remove and --add apply to the competitor checkpoint")
+            edited = edit_competitors(stage.output, remove=args.remove, add=added)
         orchestrator.approve(args.run_id, edited)
         run = orchestrator.resume(args.run_id)
     _print_run(run)
@@ -176,7 +242,7 @@ def _cmd_approve(args: argparse.Namespace) -> int:
 
 def _cmd_resume(args: argparse.Namespace) -> int:
     with _open_store(args) as store:
-        run = _orchestrator(store).resume(args.run_id, from_stage=args.from_stage)
+        run = _orchestrator(args, store).resume(args.run_id, from_stage=args.from_stage)
     _print_run(run)
     return 0
 
@@ -260,8 +326,25 @@ def _print_run(run: RunRecord) -> None:
         note = " (edited)" if record.edited_output is not None else ""
         note += f": {record.error}" if record.error else ""
         print(f"  {record.key:<16} {record.status}{note}")
+    competitors = run.stage("s1_competitors")
+    if competitors.status == "awaiting_approval":
+        _print_competitors(competitors.output)
     if run.status == "awaiting_approval":
         print(f"next    productfoundry approve {run.id}")
+
+
+def _print_competitors(output: dict) -> None:
+    print("competitors")
+    for number, competitor in enumerate(output["competitors"], start=1):
+        tag = " (incumbent)" if competitor["is_incumbent"] else ""
+        stores = ", ".join(f"{k}: {v}" for k, v in competitor["store_ids"].items() if v)
+        print(f"  {number}. {competitor['name']}{tag}  {competitor['url']}")
+        print(f"     {competitor['positioning']}")
+        print(f"     why: {competitor['reason']}" + (f"  [{stores}]" if stores else ""))
+    if output["rejected"]:
+        print("rejected")
+    for rejected in output["rejected"]:
+        print(f"  - {rejected['name']}: {rejected['reason']}")
 
 
 if __name__ == "__main__":

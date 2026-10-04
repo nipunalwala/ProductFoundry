@@ -1,0 +1,65 @@
+{
+  "resultCount": 5,
+  "results": [
+    {
+      "trackId": 458023433,
+      "trackName": "Splitwise",
+      "sellerName": "Splitwise, Inc.",
+      "trackViewUrl": "https://apps.apple.com/in/app/splitwise/id458023433?uo=4",
+      "sellerUrl": "https://www.splitwise.com/press",
+      "bundleId": "com.Splitwise.SplitwiseMobile",
+      "primaryGenreName": "Finance",
+      "averageUserRating": 4.41296,
+      "userRatingCount": 13156,
+      "description": "Splitwise is the easiest way to share expenses with friends and family and stop stressing about “who owes who”. Millions of people around the world use Splitwise to organize group bills for households, trips, and more. Our mission is to reduce the stress and awkwardness that money places on our most"
+    },
+    {
+      "trackId": 1573115695,
+      "trackName": "Splitkaro - Split bills fairly",
+      "sellerName": "Splitkaro Private Limited",
+      "trackViewUrl": "https://apps.apple.com/in/app/splitkaro-split-bills-fairly/id1573115695?uo=4",
+      "sellerUrl": "https://www.splitkaro.com/",
+      "bundleId": "org.bsquare.splitkaro",
+      "primaryGenreName": "Finance",
+      "averageUserRating": 4.73622,
+      "userRatingCount": 3609,
+      "description": "Introducing Splitkaro: The Ultimate Group Expense Manager\n\nNow available in the USA, Splitkaro transforms the way you manage shared expenses. Whether it's with friends, flatmates, family, or colleagues, we make splitting bills simple, transparent, and stress-free.\n\nSplit karo, khush raho :)\n\n#Who is"
+    },
+    {
+      "trackId": 349866256,
+      "trackName": "tricount: Split & Settle Bills",
+      "sellerName": "Tricount SA",
+      "trackViewUrl": "https://apps.apple.com/in/app/tricount-split-settle-bills/id349866256?uo=4",
+      "sellerUrl": "https://www.tricount.com",
+      "bundleId": "com.tribab.tricount.test",
+      "primaryGenreName": "Finance",
+      "averageUserRating": 4.76291,
+      "userRatingCount": 1607,
+      "description": "Join over 17 million users worldwide who trust tricount to split bills, track expenses, and settle up—free and unlimited.\n\ntricount is the easiest way to split costs, manage group expenses, and settle balances with friends, roomies, or your partner. Whether you're organizing a trip, splitting rent, "
+    },
+    {
+      "trackId": 991473495,
+      "trackName": "Splid – Split group bills",
+      "sellerName": "Nicolas Jersch",
+      "trackViewUrl": "https://apps.apple.com/in/app/splid-split-group-bills/id991473495?uo=4",
+      "sellerUrl": "http://www.splid.app",
+      "bundleId": "de.teamturtle.splid",
+      "primaryGenreName": "Finance",
+      "averageUserRating": 4.82636,
+      "userRatingCount": 1434,
+      "description": "Perfect for holidays, housemates or your relationship, Splid helps you to stay on top of your expenses and settle up in an easy, relaxed way.\n\nNo more fiddling about with change, lost receipts, or disagreements about the balance. Simply enter all your expenses and Splid shows you who owes how much t"
+    },
+    {
+      "trackId": 737534985,
+      "trackName": "Settle Up - Group Expenses",
+      "sellerName": "Step Up Labs, Inc.",
+      "trackViewUrl": "https://apps.apple.com/in/app/settle-up-group-expenses/id737534985?uo=4",
+      "sellerUrl": "https://settleup.io",
+      "bundleId": "cz.bioport.SettleUp7",
+      "primaryGenreName": "Finance",
+      "averageUserRating": 4.7601,
+      "userRatingCount": 1905,
+      "description": "Settle group expenses without the stress.\n\nTired of messy IOUs, awkward money talks, and complex math after a trip or shared dinner? \nSettle Up is the smartest way to track shared expenses and manage \"who owes whom\" instantly. From simple bill splitting to complex multi-currency adventures, we handl"
+    }
+  ]
+}

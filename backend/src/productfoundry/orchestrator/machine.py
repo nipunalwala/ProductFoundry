@@ -1,7 +1,6 @@
 """The run state machine. It is the only code that reads or writes run state."""
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import replace
 from datetime import datetime
 from types import MappingProxyType
 from typing import Any
@@ -135,7 +134,7 @@ class Orchestrator:
             raw = self._stages[spec.key](
                 run.input.model_copy(deep=True),
                 self._earlier_outputs(run, spec),
-                replace(self._services, seed=run.seed),
+                self._services.for_run(run.id, run.seed),
             )
             output = _validate(spec, raw)
         except QuotaExhausted as exc:

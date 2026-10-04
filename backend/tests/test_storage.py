@@ -140,7 +140,7 @@ def test_an_unreachable_database_is_reported_without_the_password():
 def cli(db_engine, tmp_path, *args) -> str:
     env = os.environ | {"DATABASE_URL": db_engine.url.render_as_string(hide_password=False)}
     result = subprocess.run(
-        [sys.executable, "-m", "productfoundry.cli", *args],
+        [sys.executable, "-m", "productfoundry.cli", "--fake-stages", *args],
         env=env,
         cwd=tmp_path,
         capture_output=True,

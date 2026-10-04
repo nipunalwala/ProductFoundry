@@ -1,18 +1,29 @@
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
 from pydantic import BaseModel
 
 from productfoundry.core.run_input import RunInput
+from productfoundry.llm.types import Completer
 from productfoundry.orchestrator.state import RunRecord
+from productfoundry.sources import AppLookup
+from productfoundry.sources.search import SearchProvider
 
 
 @dataclass(frozen=True)
 class Services:
-    """What a stage may use besides its inputs. Later phases add the gateway and sources."""
+    """What a stage may use besides its inputs: adapters, never run state."""
 
     seed: int = 0
+    llm: Completer | None = None
+    search: SearchProvider | None = None
+    app_lookups: Mapping[str, AppLookup] = field(default_factory=dict)  # by store name
+
+    def for_run(self, run_id: str, seed: int) -> "Services":
+        """The services one run's stages get: its seed, and LLM calls recorded against it."""
+        llm = self.llm.for_run(run_id) if hasattr(self.llm, "for_run") else self.llm
+        return replace(self, seed=seed, llm=llm)
 
 
 class Stage(Protocol):

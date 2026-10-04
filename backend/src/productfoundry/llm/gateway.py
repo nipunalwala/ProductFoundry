@@ -92,6 +92,10 @@ class Gateway:
             raise QuotaExhausted(f"out of quota for task {task}: " + ", ".join(out_of_quota))
         raise LlmFailed(f"no provider in {chain} has an API key in .env")
 
+    def for_run(self, run_id: str) -> "RunGateway":
+        """The gateway as a stage uses it, with calls recorded against the run."""
+        return RunGateway(self, run_id)
+
     def check(self, provider: str, schema: type[T], messages: Sequence[Message]) -> LlmCall:
         """One live call to one provider, with the usual accounting. For `llm check`."""
         spec = self._routing.providers[provider]
@@ -186,6 +190,15 @@ class Gateway:
         if on_record is not None:
             on_record(call)
         return result, outcome, error
+
+
+class RunGateway:
+    def __init__(self, gateway: Gateway, run_id: str) -> None:
+        self._gateway = gateway
+        self._run_id = run_id
+
+    def complete(self, task: str, messages: Sequence[Message], schema: type[T]) -> T:
+        return self._gateway.complete(task, messages, schema, run_id=self._run_id)
 
 
 def _with_schema(messages: Sequence[Message], schema: type[BaseModel]) -> list[Message]:

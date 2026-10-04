@@ -43,7 +43,12 @@ py -m uv run productfoundry llm check                  # one small live call per
 
 LLM providers and their pinned models are set in
 `backend/src/productfoundry/llm/routing.toml`. Put `GEMINI_API_KEY`,
-`GROQ_API_KEY` and `OPENROUTER_API_KEY` in `.env`.
+`GROQ_API_KEY` and `OPENROUTER_API_KEY` in `.env`, and `TAVILY_API_KEY` for web
+search.
+
+At the competitor checkpoint, `approve` also takes `--remove NAME` and
+`--add competitors.json`. `--fake-stages` runs every stage as a stand-in, with
+no outside request.
 
 ## Test
 

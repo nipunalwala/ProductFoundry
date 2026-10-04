@@ -8,6 +8,7 @@ from productfoundry.llm.gateway import Gateway
 from productfoundry.llm.routing import Routing, load_routing
 from productfoundry.llm.types import (
     CallStore,
+    Completer,
     LlmCall,
     LlmFailed,
     Message,
@@ -21,6 +22,7 @@ from productfoundry.settings import Settings
 
 __all__ = [
     "CallStore",
+    "Completer",
     "Gateway",
     "LlmCall",
     "LlmFailed",

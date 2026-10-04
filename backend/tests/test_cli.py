@@ -22,7 +22,7 @@ def cli(tmp_path, capsys):
     state = tmp_path / "runs.json"
 
     def run(*args):
-        code = main(["--memory", "--state-file", str(state), *args])
+        code = main(["--memory", "--fake-stages", "--state-file", str(state), *args])
         captured = capsys.readouterr()
         return code, captured.out, captured.err
 
@@ -134,3 +134,34 @@ def test_schema_lists_prints_and_writes_json_schema(cli, tmp_path):
         f"{name}.v1.schema.json" for name in SCHEMAS
     )
     assert json.loads((out_dir / "PainPointReport.v1.schema.json").read_text(encoding="utf-8"))
+
+
+def test_the_competitor_checkpoint_prints_the_list_and_takes_remove_and_add(
+    cli, input_file, tmp_path
+):
+    code, out, _ = cli("run", "--input", str(input_file))
+    run_id = out.split()[1]
+    assert "competitors\n  1. Walnut (incumbent)  https://walnut.example" in out
+    assert "  2. Fake Rival  https://rival.example" in out
+    assert "why: Solves the same problem for the same users." in out
+
+    add_file = tmp_path / "add.json"
+    added = {
+        "name": "Money View",
+        "url": "https://moneyview.example",
+        "positioning": "Expense tracking and loans.",
+        "target_users": "Salaried people",
+    }
+    add_file.write_text(json.dumps([added]), encoding="utf-8")
+
+    code, _, err = cli("approve", run_id, "--remove", "Nobody")
+    assert code == 1 and "no competitor named 'Nobody'" in err
+
+    code, out, _ = cli("approve", run_id, "--remove", "fake rival", "--add", str(add_file))
+    assert code == 0 and "s1_competitors   completed (edited)" in out
+
+    _, out, _ = cli("status", run_id, "--output", "s1_competitors")
+    assert [c["name"] for c in json.loads(out)["competitors"]] == ["Walnut", "Money View"]
+
+    code, _, err = cli("approve", run_id, "--remove", "Walnut")
+    assert code == 1 and "competitor checkpoint" in err

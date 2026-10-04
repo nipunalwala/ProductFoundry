@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr | None = None
     openrouter_api_key: SecretStr | None = None
 
+    # Web search for competitor discovery (decision D1: Tavily).
+    tavily_api_key: SecretStr | None = None
+
     def sqlalchemy_url(self) -> URL:
         if self.database_url:
             return make_url(self.database_url)

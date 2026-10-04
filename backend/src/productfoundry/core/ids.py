@@ -13,6 +13,11 @@ def new_id(prefix: IdPrefix) -> str:
     return f"{prefix}{uuid4().hex[:16]}"
 
 
+def product_id(key: str) -> str:
+    """A stable id from what identifies the product: a store id, a host or a name."""
+    return f"prod_{sha256(key.encode()).hexdigest()[:16]}"
+
+
 def review_id(source: str, source_review_id: str) -> str:
     """The same review from the same source always gets the same id."""
     digest = sha256(f"{source}\x00{source_review_id}".encode()).hexdigest()

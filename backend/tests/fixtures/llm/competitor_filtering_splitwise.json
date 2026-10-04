@@ -1,0 +1,70 @@
+{
+  "_note": "Written by hand as a model would answer the tavily_search_splitwise.json results (no LLM key existed in phase 4). It repeats Tricount under two names and invents one URL on purpose, to exercise merging and URL checking.",
+  "kept": [
+    {
+      "name": "Splitwise",
+      "url": null,
+      "positioning": "The best-known app for splitting bills and tracking shared expenses.",
+      "target_users": "Flatmates, couples and friends on trips",
+      "reason": "It is the incumbent.",
+      "results": [1]
+    },
+    {
+      "name": "Tricount",
+      "url": "https://www.tricount.com/",
+      "positioning": "A free, ad-free way to share group expenses.",
+      "target_users": "Friends on trips, flatshares and couples",
+      "reason": "It splits group expenses for the same users and has no daily limit.",
+      "results": [1, 2]
+    },
+    {
+      "name": "tricount: Split & Settle Bills",
+      "url": null,
+      "positioning": "Organises group expenses and tells who owes whom.",
+      "target_users": "Groups sharing costs",
+      "reason": "Same product as listed on Google Play.",
+      "results": [3]
+    },
+    {
+      "name": "Settle Up",
+      "url": "https://settleup.io/",
+      "positioning": "Tracks a group's expenses and shows who should pay next, also offline.",
+      "target_users": "Groups of friends and travellers",
+      "reason": "It solves the same shared-expense problem.",
+      "results": [1, 4]
+    },
+    {
+      "name": "Splitkaro",
+      "url": "https://splitkaro.example/",
+      "positioning": "An Indian bill splitting app with UPI settle-up.",
+      "target_users": "Flatmates and travellers in India",
+      "reason": "It targets the same users in India and settles over UPI.",
+      "results": [1, 5]
+    },
+    {
+      "name": "Splid",
+      "url": "https://splid.app/",
+      "positioning": "Bill splitting that needs no sign-up.",
+      "target_users": "Small groups",
+      "reason": "It is listed as a direct alternative.",
+      "results": [1]
+    }
+  ],
+  "rejected": [
+    {
+      "name": "YNAB",
+      "url": "https://www.ynab.com/",
+      "reason": "Personal budgeting for one person, not splitting shared expenses."
+    },
+    {
+      "name": "How to split rent fairly with roommates",
+      "url": "https://finance-magazine.example/split-rent-fairly",
+      "reason": "An article, not a product."
+    },
+    {
+      "name": "ynab",
+      "url": null,
+      "reason": "Duplicate mention of YNAB."
+    }
+  ]
+}

@@ -330,7 +330,7 @@ def test_a_completed_run_is_not_resumed_without_naming_a_stage(run_input):
 def test_the_stage_interface_gives_no_access_to_run_state():
     parameters = list(inspect.signature(Stage.__call__).parameters)
     assert parameters == ["self", "run_input", "earlier_outputs", "services"]
-    assert [field for field in Services.__dataclass_fields__] == ["seed"]
+    assert set(Services.__dataclass_fields__) == {"seed", "llm", "search", "app_lookups"}
 
 
 def test_a_stage_that_tampers_with_its_inputs_does_not_change_run_state(run_input):

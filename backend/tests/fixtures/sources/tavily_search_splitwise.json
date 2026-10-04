@@ -1,0 +1,52 @@
+{
+  "_note": "Written by hand in the response shape of https://docs.tavily.com (no API key existed in phase 4). Replace with a recorded response after the first live run.",
+  "query": "Splitwise alternatives and competitors",
+  "answer": null,
+  "images": [],
+  "results": [
+    {
+      "title": "7 Best Splitwise Alternatives for Splitting Bills",
+      "url": "https://expense-blog.example/best-splitwise-alternatives",
+      "content": "Splitwise now limits free users to a few expenses a day. Alternatives: Tricount (free, no daily limit), Settle Up (group expenses with offline mode), Splid (no sign-up needed) and Splitkaro, built for India with UPI settle-up.",
+      "score": 0.91
+    },
+    {
+      "title": "Tricount - Split & settle bills with friends",
+      "url": "https://www.tricount.com/",
+      "content": "Tricount is the easiest way to share group expenses with friends on trips, in flatshares and for couples. Free and without ads.",
+      "score": 0.84
+    },
+    {
+      "title": "tricount: Split & Settle Bills - Apps on Google Play",
+      "url": "https://play.google.com/store/apps/details?id=com.tribab.tricount.android&hl=en_IN",
+      "content": "Organise group expenses: tricount does the maths and tells who owes whom.",
+      "score": 0.8
+    },
+    {
+      "title": "Settle Up - Group Expenses",
+      "url": "https://settleup.io/",
+      "content": "Settle Up keeps track of your gang's expenses and shows who should pay next. Works offline, supports multiple currencies.",
+      "score": 0.77
+    },
+    {
+      "title": "Splitkaro: split bills and settle with UPI",
+      "url": "https://splitkaro.example/",
+      "content": "Splitkaro is an Indian bill splitting app for flatmates and trips. Settle up over UPI in one tap.",
+      "score": 0.74
+    },
+    {
+      "title": "YNAB. Personal budgeting software for Type-A people",
+      "url": "https://www.ynab.com/",
+      "content": "YNAB is a personal budgeting app that helps you give every dollar a job.",
+      "score": 0.52
+    },
+    {
+      "title": "How to split rent fairly with roommates",
+      "url": "https://finance-magazine.example/split-rent-fairly",
+      "content": "Five rules for dividing rent by room size and income.",
+      "score": 0.41
+    }
+  ],
+  "response_time": 1.42,
+  "request_id": "00000000-0000-4000-8000-000000000001"
+}
