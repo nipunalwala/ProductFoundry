@@ -12,6 +12,7 @@ from productfoundry.core.pain_points import (
     PainPointReport,
     pain_point_score,
 )
+from productfoundry.core.prd import Prd, Requirement, market_gaps
 from productfoundry.core.reviews import ProductReviewCounts, ReviewSet
 from productfoundry.core.run_input import RunInput, StoreIds
 from productfoundry.orchestrator.protocols import Services, Stage
@@ -99,8 +100,42 @@ def fake_pain_points(
     )
 
 
+def fake_prd(
+    run_input: RunInput, earlier_outputs: Mapping[str, BaseModel], services: Services
+) -> Prd:
+    report: PainPointReport = earlier_outputs["s3_pain_points"]
+    gap = market_gaps(earlier_outputs["s1_competitors"])[-1]
+    requirements = [
+        Requirement(
+            id=f"req_{number:03d}",
+            statement=f"The product must fix: {point.label}.",
+            priority="must",
+            evidence=[point.cluster_id],
+        )
+        for number, point in enumerate(report.pain_points, start=1)
+    ]
+    requirements.append(
+        Requirement(
+            id=f"req_{len(requirements) + 1:03d}",
+            statement=f"The product must cost less than {gap.product_name}.",
+            priority="should",
+            evidence=[gap.id],
+        )
+    )
+    return Prd(
+        problem=f"Users of the existing products are let down. Idea: {run_input.idea}",
+        users=run_input.target_users,
+        goals=["Fix the top pain points."],
+        non_goals=["Anything no review asks for."],
+        requirements=requirements,
+        success_metrics=["Fewer complaints about the top pain points."],
+        market_gaps=[gap],
+    )
+
+
 FAKE_STAGES: dict[str, Stage] = {
     "s1_competitors": fake_competitors,
     "s2_reviews": fake_reviews,
     "s3_pain_points": fake_pain_points,
+    "s4_prd": fake_prd,
 }

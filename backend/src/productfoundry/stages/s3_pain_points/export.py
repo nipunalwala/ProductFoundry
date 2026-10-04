@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from productfoundry.core.errors import StageOutputInvalid
-from productfoundry.core.pain_points import PainPointReport
+from productfoundry.core.pain_points import PainPoint, PainPointReport
 from productfoundry.core.reviews import Review
 
 QUOTE_CHARS = 280  # reviews are quoted briefly as evidence, never in bulk
@@ -24,6 +24,30 @@ def shorten(text: str, limit: int = QUOTE_CHARS) -> str:
     return text[:limit].rsplit(" ", 1)[0].rstrip(" ,.;:") + "…"
 
 
+def resolve_quote(
+    review_id: str,
+    point: PainPoint,
+    reviews: Mapping[str, Review],
+    product_names: Mapping[str, str],
+) -> dict[str, Any]:
+    """A quoted review as plain data. A quote that is not stored is an error, never a gap."""
+    review = reviews.get(review_id)
+    if review is None:
+        raise StageOutputInvalid(f"quoted review {review_id} is not stored")
+    return {
+        "review_id": review.id,
+        "text": shorten(review.text),
+        "language": review.language,
+        # A translation of the quote, written by the LLM. Not the review's text.
+        "translation": point.quote_glosses.get(review.id),
+        "product": product_names.get(review.product_id, review.product_id),
+        "source": str(review.source),
+        "url": review.url,
+        "date": review.reviewed_at.date().isoformat(),
+        "rating": review.rating,
+    }
+
+
 def export_report(
     report: PainPointReport,
     reviews: Mapping[str, Review],
@@ -37,25 +61,10 @@ def export_report(
     """
     points = []
     for point in report.pain_points:
-        quotes = []
-        for review_id in point.quote_review_ids:
-            review = reviews.get(review_id)
-            if review is None:
-                raise StageOutputInvalid(f"quoted review {review_id} is not stored")
-            quotes.append(
-                {
-                    "review_id": review.id,
-                    "text": shorten(review.text),
-                    "language": review.language,
-                    # A translation of the quote, written by the LLM. Not the review's text.
-                    "translation": point.quote_glosses.get(review.id),
-                    "product": product_names.get(review.product_id, review.product_id),
-                    "source": str(review.source),
-                    "url": review.url,
-                    "date": review.reviewed_at.date().isoformat(),
-                    "rating": review.rating,
-                }
-            )
+        quotes = [
+            resolve_quote(review_id, point, reviews, product_names)
+            for review_id in point.quote_review_ids
+        ]
         points.append(
             point.model_dump(mode="json", exclude={"quote_review_ids", "quote_glosses"})
             | {
@@ -78,6 +87,18 @@ def export_report(
 def _plain(text: str) -> str:
     """Review text as inert Markdown: nothing a reviewer typed becomes formatting or a link."""
     return re.sub(r"([\\`*_\[\]<>#|])", r"\\\1", text)
+
+
+def quote_lines(quote: Mapping[str, Any]) -> list[str]:
+    """A quote as a Markdown blockquote: its words, its translation if any, its source."""
+    where = f"{SOURCE_NAMES.get(quote['source'], quote['source'])}, {quote['date']}"
+    if quote["url"]:
+        where = f"[{where}]({quote['url']})"
+    stars = f", {quote['rating']}/5 stars" if quote["rating"] else ""
+    lines = [f"> {_plain(quote['text'])}"]
+    if quote["translation"]:
+        lines += [">", f"> *Translation: {_plain(quote['translation'])}*"]
+    return [*lines, ">", f"> {quote['product']}, {where}{stars} · `{quote['review_id']}`"]
 
 
 def render_markdown(export: Mapping[str, Any]) -> str:
@@ -115,14 +136,7 @@ def render_markdown(export: Mapping[str, Any]) -> str:
             "Quotes:",
         ]
         for quote in point["quotes"]:
-            where = f"{SOURCE_NAMES.get(quote['source'], quote['source'])}, {quote['date']}"
-            if quote["url"]:
-                where = f"[{where}]({quote['url']})"
-            stars = f", {quote['rating']}/5 stars" if quote["rating"] else ""
-            lines += ["", f"> {_plain(quote['text'])}"]
-            if quote["translation"]:
-                lines += [">", f"> *Translation: {_plain(quote['translation'])}*"]
-            lines += [">", f"> {quote['product']}, {where}{stars} · `{quote['review_id']}`"]
+            lines += ["", *quote_lines(quote)]
     if export["junk_clusters"]:
         lines += ["", "## Groups that are not a pain point", ""]
         lines += [

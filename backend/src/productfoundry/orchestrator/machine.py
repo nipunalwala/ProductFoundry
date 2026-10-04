@@ -56,6 +56,7 @@ class Orchestrator:
         invalidated. Without it, a failed run retries its failed stage.
         """
         run = self._store.get(run_id)
+        self._add_new_stages(run)
         if from_stage is not None:
             self._invalidate_from(run, from_stage)
         elif run.status is RunStatus.AWAITING_APPROVAL:
@@ -90,6 +91,11 @@ class Orchestrator:
         run.status = RunStatus.RUNNING
         self._save(run)
         return run
+
+    def _add_new_stages(self, run: RunRecord) -> None:
+        """A run started before a stage was built gets that stage, pending, at the end."""
+        known = {record.key for record in run.stages}
+        run.stages += [StageRecord(key=s.key) for s in self._pipeline if s.key not in known]
 
     def _invalidate_from(self, run: RunRecord, stage_key: str) -> None:
         keys = [spec.key for spec in self._pipeline]

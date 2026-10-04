@@ -1,0 +1,22 @@
+{
+  "_note": "Written by hand: the PRD a careful reader would draft for the invented themes of test_s3_pain_points.py. The test fills in `requirements[].evidence`, because cluster ids depend on the run.",
+  "answer": {
+    "problem": "People who share expenses lose trust in the incumbent when payments fail after the money is debited and when they cannot log in. They want an app that settles up reliably.",
+    "users": "Flatmates and friends in Indian cities who split rent, groceries and trips, and who pay each other by UPI.",
+    "goals": [
+      "A payment either completes or is refunded without the user asking.",
+      "A user can always get back into their account."
+    ],
+    "non_goals": ["An ad-free paid tier is left for a later version."],
+    "requirements": [
+      {"statement": "The product must show the final state of every payment and refund a failed one automatically.", "priority": "must"},
+      {"statement": "The product must offer a second way to log in when the verification code does not arrive.", "priority": "must"},
+      {"statement": "The product should never show a full-screen ad during a payment.", "priority": "should"},
+      {"statement": "The product could offer group settlement in one tap, which the competitor lacks.", "priority": "could"}
+    ],
+    "success_metrics": [
+      "Share of payments that end in a clear final state.",
+      "Share of login attempts that succeed."
+    ]
+  }
+}

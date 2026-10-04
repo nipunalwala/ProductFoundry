@@ -120,6 +120,12 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--out", type=Path, help="write to this file instead of printing")
     report.set_defaults(handler=_cmd_report)
 
+    prd = commands.add_parser("prd", help="export the PRD of a run, with its citations")
+    prd.add_argument("run_id")
+    prd.add_argument("--format", choices=["md", "json"], default="md")
+    prd.add_argument("--out", type=Path, help="write to this file instead of printing")
+    prd.set_defaults(handler=_cmd_prd)
+
     db = commands.add_parser("db", help="manage the database")
     db.add_argument("action", choices=["upgrade"], help="upgrade: apply the migrations")
     db.set_defaults(handler=_cmd_db)
@@ -189,11 +195,13 @@ def _orchestrator(args: argparse.Namespace, store: RunStore) -> Orchestrator:
     from productfoundry.stages.s1_competitors import competitors_stage
     from productfoundry.stages.s2_reviews import ReviewSettings, ReviewStage
     from productfoundry.stages.s3_pain_points import pain_points_stage
+    from productfoundry.stages.s4_prd import prd_stage
 
     stages = {
         "s1_competitors": competitors_stage,
         "s2_reviews": ReviewStage(ReviewSettings(cap_per_store=args.review_cap)),
         "s3_pain_points": pain_points_stage,
+        "s4_prd": prd_stage,
     }
     return Orchestrator(store, stages, services=_services(args))
 
@@ -362,34 +370,59 @@ def _check_pain_point_edit(args: argparse.Namespace, run: RunRecord, edited: obj
     check_report(report, clusters.for_run(run.id), stored, ranked_by_score=False)
 
 
+def _stage_output(run: RunRecord, key: str, name: str) -> dict:
+    stages = {record.key: record for record in run.stages}
+    output = stages[key].effective_output if key in stages else None
+    if output is None:
+        raise ProductFoundryError(f"run {run.id} has no {name} yet")
+    return output
+
+
 def _cmd_report(args: argparse.Namespace) -> int:
+    from productfoundry.stages.s3_pain_points.export import export_report, render_markdown
+
     with _open_store(args) as store:
         run = store.get(args.run_id)
-        output = run.stage("s3_pain_points").effective_output
-        if output is None:
-            raise ProductFoundryError(f"run {run.id} has no pain-point report yet")
-        if args.sessions is None:
-            raise ProductFoundryError(
-                "the report quotes stored reviews, which --memory does not keep"
-            )
-        from productfoundry.core.competitors import CompetitorList
-        from productfoundry.core.pain_points import PainPointReport
-        from productfoundry.stages.s3_pain_points import run_reviews
-        from productfoundry.stages.s3_pain_points.export import export_report, render_markdown
+        report, names, reviews = _evidence(args, run)
+        export = export_report(report, reviews, names, title=_title(run))
+    return _write_export(args, export, render_markdown)
 
-        competitors = CompetitorList.model_validate(run.stage("s1_competitors").effective_output)
-        names, reviews = run_reviews(competitors, _evidence_stores(args)[0])
-        incumbent = run.input.incumbent
-        export = export_report(
-            PainPointReport.model_validate(output),
-            reviews,
-            names,
-            title=incumbent.name if incumbent else run.input.idea,
-        )
+
+def _cmd_prd(args: argparse.Namespace) -> int:
+    from productfoundry.core.prd import Prd
+    from productfoundry.stages.s4_prd.export import export_prd, render_prd_markdown
+
+    with _open_store(args) as store:
+        run = store.get(args.run_id)
+        prd = Prd.model_validate(_stage_output(run, "s4_prd", "PRD"))
+        report, names, reviews = _evidence(args, run)
+        export = export_prd(prd, report, reviews, names, title=run.input.idea)
+    return _write_export(args, export, render_prd_markdown)
+
+
+def _title(run: RunRecord) -> str:
+    return run.input.incumbent.name if run.input.incumbent else run.input.idea
+
+
+def _evidence(args: argparse.Namespace, run: RunRecord):
+    """The run's approved pain-point report, its product names and its stored reviews."""
+    output = _stage_output(run, "s3_pain_points", "pain-point report")
+    if args.sessions is None:
+        raise ProductFoundryError("the export quotes stored reviews, which --memory does not keep")
+    from productfoundry.core.competitors import CompetitorList
+    from productfoundry.core.pain_points import PainPointReport
+    from productfoundry.stages.s3_pain_points import run_reviews
+
+    competitors = CompetitorList.model_validate(run.stage("s1_competitors").effective_output)
+    names, reviews = run_reviews(competitors, _evidence_stores(args)[0])
+    return PainPointReport.model_validate(output), names, reviews
+
+
+def _write_export(args: argparse.Namespace, export: dict, render) -> int:
     if args.format == "json":
         text = json.dumps(export, indent=2, ensure_ascii=False) + "\n"
     else:
-        text = render_markdown(export)
+        text = render(export)
     if args.out is None:
         print(text, end="")
     else:

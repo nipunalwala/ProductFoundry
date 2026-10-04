@@ -8,6 +8,12 @@ import pytest
 from productfoundry.core.run_input import RunInput
 
 
+@pytest.fixture(autouse=True)
+def no_live_llm(monkeypatch):
+    """Tests never reach an LLM provider, whatever keys `.env` holds."""
+    monkeypatch.setattr("productfoundry.llm.live_providers", lambda routing, settings: {})
+
+
 def run_input_data(**overrides) -> dict:
     data = {
         "mode": "alternative",

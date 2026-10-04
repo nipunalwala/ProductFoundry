@@ -28,7 +28,7 @@ class Recorder:
         self.calls: list[str] = []
         self.received: dict[str, dict] = {}
         self.stages = {key: self._wrap(key, replacements.get(key, FAKE_STAGES[key]))
-                       for key in FAKE_STAGES}  # fmt: skip
+                       for key in (S1, S2, S3)}  # fmt: skip
 
     def _wrap(self, key, stage):
         def wrapped(run_input, earlier_outputs, services):
@@ -42,7 +42,8 @@ class Recorder:
 def build(**replacements):
     store = InMemoryRunStore()
     recorder = Recorder(**replacements)
-    return Orchestrator(store, recorder.stages), store, recorder
+    # The state machine is tested on the first three stages: two checkpoints, one plain stage.
+    return Orchestrator(store, recorder.stages, pipeline=PIPELINE[:3]), store, recorder
 
 
 def statuses(run):
@@ -264,12 +265,12 @@ def complete(orchestrator, run_input):
 
 def test_a_run_resumes_from_what_a_new_orchestrator_finds_in_the_store(run_input):
     store = InMemoryRunStore()
-    first = Orchestrator(store, FAKE_STAGES)
+    first = Orchestrator(store, FAKE_STAGES, pipeline=PIPELINE[:3])
     run = first.resume(first.create_run(run_input).id)
 
     restored = InMemoryRunStore.load_json(store.dump_json())
     recorder = Recorder()
-    second = Orchestrator(restored, recorder.stages)
+    second = Orchestrator(restored, recorder.stages, pipeline=PIPELINE[:3])
     second.approve(run.id)
     run = second.resume(run.id)
 

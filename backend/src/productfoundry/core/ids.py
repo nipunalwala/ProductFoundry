@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from pydantic import StringConstraints
 
-IdPrefix = Literal["run_", "prod_", "rev_", "cl_", "req_", "task_"]
+IdPrefix = Literal["run_", "prod_", "rev_", "cl_", "gap_", "req_", "task_"]
 
 
 def new_id(prefix: IdPrefix) -> str:
@@ -24,7 +24,16 @@ def review_id(source: str, source_review_id: str) -> str:
     return f"rev_{digest[:20]}"
 
 
+def market_gap_id(product: str) -> str:
+    """The id of the competitor fact stage 1 recorded about a product."""
+    return f"gap_{sha256(product.encode()).hexdigest()[:16]}"
+
+
 RunId = Annotated[str, StringConstraints(pattern=r"^run_[A-Za-z0-9]+$")]
 ProductId = Annotated[str, StringConstraints(pattern=r"^prod_[A-Za-z0-9]+$")]
 ReviewId = Annotated[str, StringConstraints(pattern=r"^rev_[A-Za-z0-9]+$")]
 ClusterId = Annotated[str, StringConstraints(pattern=r"^cl_[A-Za-z0-9]+$")]
+GapId = Annotated[str, StringConstraints(pattern=r"^gap_[A-Za-z0-9]+$")]
+# What a requirement may cite: a pain-point cluster or a market gap.
+EvidenceId = Annotated[str, StringConstraints(pattern=r"^(cl|gap)_[A-Za-z0-9]+$")]
+RequirementId = Annotated[str, StringConstraints(pattern=r"^req_[A-Za-z0-9]+$")]

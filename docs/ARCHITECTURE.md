@@ -152,6 +152,10 @@ Notes:
   is checked against the saved clusters and the stored reviews.
 - At checkpoint 3 the user can rename, merge, drop and re-rank pain points. A
   merged pain point lists the clusters it holds and counts all their reviews.
+- Stage 4 may cite two kinds of evidence: the cluster of an approved pain point,
+  and a market gap. Until the market panel exists a market gap is one fact per
+  competitor from stage 1, with its own `gap_` id. A citation that does not
+  exist in the run fails the LLM answer, which triggers the gateway's fallback.
 - "Negative" means sentiment from stage 2. Star rating is stored but is not the
   sentiment.
 - RICE: Reach = cluster size, Impact = severity (later multiplied by the growth

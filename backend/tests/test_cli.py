@@ -5,6 +5,7 @@ import pytest
 from conftest import run_input_data
 from productfoundry import __version__
 from productfoundry.cli import main
+from productfoundry.core.base import schema_version_of
 from productfoundry.core.registry import SCHEMAS
 
 
@@ -121,8 +122,9 @@ def test_status_with_no_runs(cli):
 def test_schema_lists_prints_and_writes_json_schema(cli, tmp_path):
     code, out, _ = cli("schema")
     assert code == 0 and out.split() == [
-        "RunInput", "v1", "CompetitorList", "v1", "ReviewSet", "v1", "PainPointReport", "v2",
-    ]  # fmt: skip
+        text for name, model in SCHEMAS.items() for text in (name, f"v{schema_version_of(model)}")
+    ]
+    assert "PainPointReport  v2" in out and "Prd  v1" in out
 
     code, out, _ = cli("schema", "RunInput")
     assert code == 0 and json.loads(out)["title"] == "RunInput"
@@ -131,7 +133,7 @@ def test_schema_lists_prints_and_writes_json_schema(cli, tmp_path):
     code, _, _ = cli("schema", "--out", str(out_dir))
     assert code == 0
     assert sorted(p.name for p in out_dir.iterdir()) == sorted(
-        f"{name}.v{2 if name == 'PainPointReport' else 1}.schema.json" for name in SCHEMAS
+        f"{name}.v{schema_version_of(model)}.schema.json" for name, model in SCHEMAS.items()
     )
     assert json.loads((out_dir / "PainPointReport.v2.schema.json").read_text(encoding="utf-8"))
 

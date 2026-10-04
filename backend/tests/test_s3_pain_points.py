@@ -17,7 +17,13 @@ from productfoundry.llm import Gateway, LlmFailed, ProviderError, ProviderRespon
 from productfoundry.llm.fakes import InMemoryCallStore, InMemoryUsageStore
 from productfoundry.ml.config import load_config
 from productfoundry.ml.embeddings import FakeEmbedder
-from productfoundry.orchestrator import InMemoryRunStore, Orchestrator, RunStatus, Services
+from productfoundry.orchestrator import (
+    PIPELINE,
+    InMemoryRunStore,
+    Orchestrator,
+    RunStatus,
+    Services,
+)
 from productfoundry.orchestrator.checkpoints import edit_pain_points
 from productfoundry.stages.fakes import FAKE_STAGES
 from productfoundry.stages.s3_pain_points import PainPointStage, run_reviews
@@ -493,7 +499,7 @@ def test_quotes_are_short_and_cannot_inject_markdown():
 
 def orchestrator_with(used: Services, store=None) -> Orchestrator:
     stages = FAKE_STAGES | {S1: lambda *_: COMPETITORS, S3: PainPointStage(CONFIG)}
-    return Orchestrator(store or InMemoryRunStore(), stages, services=used)
+    return Orchestrator(store or InMemoryRunStore(), stages, pipeline=PIPELINE[:3], services=used)
 
 
 def run_to_checkpoint(orchestrator: Orchestrator, run_input):
@@ -604,7 +610,9 @@ def test_the_cli_exports_the_report_and_edits_it_at_the_checkpoint(
         "approve", run.id, "--merge", "1,2", "--rename", "1=Cannot pay or log in",
         "--drop", "3",
     )  # fmt: skip
-    assert code == 0 and "s3_pain_points   completed (edited)" in out and "completed" in out
+    assert code == 0 and "s3_pain_points   completed (edited)" in out
+    # The run goes on to the PRD stage, which finds no provider: tests never call one.
+    assert "s4_prd           failed: LlmFailed: no provider" in out
 
     code, out, _ = cli("report", run.id, "--format", "json")
     (point,) = json.loads(out)["pain_points"]
