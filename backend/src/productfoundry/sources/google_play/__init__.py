@@ -16,6 +16,7 @@ from productfoundry.sources.search import SearchProvider
 
 DETAILS = "https://play.google.com/store/apps/details?id={app_id}&hl=en&gl={country}"
 _APP_ID = re.compile(r"play\.google\.com/store/apps/details\?(?:[^#\s]*&)?id=([A-Za-z0-9_.]+)")
+_TITLE_SUFFIX = re.compile(r"\s+[-\u2013]\s+Apps on Google Play\s*$")
 _DESCRIPTION_LIMIT = 500
 _MAX_PAGES = 2  # details pages read per lookup
 
@@ -44,7 +45,11 @@ class GooglePlayLookup:
         results = self._search.search(
             f"{name} app", max_results=5, region=region, domains=["play.google.com"]
         )
-        app_ids = list(dict.fromkeys(m.group(1) for r in results if (m := _APP_ID.search(r.url))))
+        # Ids whose result title is the app's name come first, so a page is rarely wasted.
+        titles = {m.group(1): r.title for r in results if (m := _APP_ID.search(r.url))}
+        app_ids = sorted(
+            titles, key=lambda app_id: not same_product(name, _TITLE_SUFFIX.sub("", titles[app_id]))
+        )
         country = region.lower()
         for app_id in app_ids[:_MAX_PAGES]:
             url = DETAILS.format(app_id=app_id, country=country)

@@ -20,7 +20,7 @@ def litellm_module(monkeypatch):
 def provider():
     from productfoundry.llm.litellm_provider import LiteLLMProvider
 
-    return LiteLLMProvider("test-key")
+    return LiteLLMProvider("sk-secret")
 
 
 def test_a_response_becomes_text_and_token_counts(litellm_module, monkeypatch):
@@ -75,6 +75,8 @@ def test_provider_errors_are_classified_and_never_quote_the_provider(
 
 def test_live_providers_exist_only_for_keys_that_are_set():
     routing = load_routing()
-    settings = Settings(_env_file=None, groq_api_key="test-key", gemini_api_key="")
+    settings = Settings(
+        _env_file=None, groq_api_key="test-key", gemini_api_key="", openrouter_api_key=None
+    )
     assert list(live_providers(routing, settings)) == ["groq"]
     assert "test-key" not in repr(settings)

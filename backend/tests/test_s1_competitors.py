@@ -439,3 +439,54 @@ def test_checkpoint_edits_report_mistakes():
     assert [c["name"] for c in by_id["competitors"]] == [
         "Splitwise", "Settle Up", "Splitkaro", "Splid",
     ]  # fmt: skip
+
+
+# Recorded live run (2026-10-04, Splitwise, region IN)
+
+RECORDED = json.loads((FIXTURES / "sources/tavily_recorded_splitwise.json").read_text("utf-8"))
+
+
+def recorded_search() -> FakeSearch:
+    return FakeSearch(
+        {
+            item["request"]["query"]: [
+                SearchResult(r["title"], r["url"], r["content"])
+                for r in item["response"]["results"]
+            ]
+            for item in RECORDED
+        }
+    )
+
+
+def test_the_recorded_live_run_replays_offline():
+    from productfoundry.llm.fakes import ReplayProvider
+
+    llm = Gateway(
+        load_routing(),
+        {"groq": ReplayProvider(FIXTURES / "llm")},
+        InMemoryCallStore(),
+        InMemoryUsageStore(),
+    )
+    run_input = splitwise_input(
+        idea="A bill splitting app with no daily limits and UPI settle-up",
+        target_users="Flatmates and friend groups in India",
+    )
+    output = CompetitorStage()(run_input, {}, Services(llm=llm, search=recorded_search()))
+
+    live = json.loads((FIXTURES / "llm/competitor_list_splitwise_live.json").read_text("utf-8"))
+    assert [c.name for c in output.competitors] == [c["name"] for c in live["competitors"]]
+    assert output.competitors[0].is_incumbent
+    assert {"Tricount", "Splid", "Settle Up"} <= {c.name for c in output.competitors}
+
+
+def test_google_play_lookup_prefers_the_result_whose_title_is_the_app():
+    fetched = []
+
+    def fetch_app(app_id, country):
+        fetched.append(app_id)
+        return {"title": "Splitwise", "developer": "Splitwise", "summary": "Split bills"}
+
+    lookup = GooglePlayLookup(recorded_search(), Robots(lambda url: PLAY_ROBOTS), fetch_app)
+    app = lookup.find("Splitwise", "IN")
+    assert app.store_id == "com.Splitwise.SplitwiseMobile"
+    assert fetched == ["com.Splitwise.SplitwiseMobile"]

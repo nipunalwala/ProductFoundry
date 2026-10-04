@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "competitors": [
+    {
+      "id": "prod_55eab50827d0717d",
+      "name": "Splitwise",
+      "url": "https://www.splitwise.com",
+      "positioning": "Splitwise is a popular expense‑splitting app for groups, trips and households.",
+      "target_users": "Flatmates, friends, couples worldwide",
+      "store_ids": {
+        "google_play": null,
+        "app_store": "458023433"
+      },
+      "reason": "The incumbent named in the run input.",
+      "is_incumbent": true
+    },
+    {
+      "id": "prod_c1b5bdbbd54a950d",
+      "name": "Tricount",
+      "url": "https://play.google.com/store/apps/details?id=com.tribab.tricount.android",
+      "positioning": "Tricount is a simple free bill‑splitting app that lets groups track expenses and settle up.",
+      "target_users": "Friends, flatmates, travelers",
+      "store_ids": {
+        "google_play": "com.tribab.tricount.android",
+        "app_store": "349866256"
+      },
+      "reason": "Offers bill splitting with no daily limits and is listed as a Splitwise alternative for India.",
+      "is_incumbent": false
+    },
+    {
+      "id": "prod_004d332f96f09845",
+      "name": "Splid",
+      "url": "https://apps.apple.com/in/app/splid-split-group-bills/id991473495",
+      "positioning": "Splid is a group expense manager focused on easy entry and settlement.",
+      "target_users": "Friends and roommates",
+      "store_ids": {
+        "google_play": null,
+        "app_store": "991473495"
+      },
+      "reason": "Featured as a Splitwise alternative in Indian‑focused guides.",
+      "is_incumbent": false
+    },
+    {
+      "id": "prod_049c53ad54a5b4f8",
+      "name": "Kittysplit",
+      "url": "https://play.google.com/store/apps/details?id=com.kittysplit",
+      "positioning": "Kittysplit is a lightweight expense‑splitting app for casual groups.",
+      "target_users": "Friends and small groups",
+      "store_ids": {
+        "google_play": "com.kittysplit",
+        "app_store": "6742316700"
+      },
+      "reason": "Listed among top Splitwise alternatives for India.",
+      "is_incumbent": false
+    },
+    {
+      "id": "prod_4be3cd2faffab954",
+      "name": "Settle Up",
+      "url": "https://tricount.com/en-in/blog/top-splitwise-alternatives-in-india-2025-which-app-should-you-switch-to",
+      "positioning": "Settle Up is a multi‑currency expense‑splitting app with UPI support.",
+      "target_users": "Flatmates, travelers, international groups",
+      "store_ids": {
+        "google_play": null,
+        "app_store": null
+      },
+      "reason": "Frequently cited as a strong Splitwise competitor with no daily caps and Indian‑relevant features.",
+      "is_incumbent": false
+    },
+    {
+      "id": "prod_3329abbaf2f084d9",
+      "name": "SplitFast",
+      "url": "https://splitfast.io/blog/splitwise-alternatives",
+      "positioning": "SplitFast is a Telegram‑native bot that splits expenses directly in chat.",
+      "target_users": "Telegram groups, friends, travelers",
+      "store_ids": {
+        "google_play": null,
+        "app_store": null
+      },
+      "reason": "Promoted as a no‑limit Splitwise alternative, especially for chat‑based groups.",
+      "is_incumbent": false
+    },
+    {
+      "id": "prod_5edb90e570e2bc19",
+      "name": "Splitser",
+      "url": "https://splitser.com/splitwise-switch-service",
+      "positioning": "Splitser is a free group expense management app with web and mobile versions.",
+      "target_users": "Friends, couples, flatmates",
+      "store_ids": {
+        "google_play": null,
+        "app_store": null
+      },
+      "reason": "Marketed as a free alternative after Splitwise introduced daily limits.",
+      "is_incumbent": false
+    },
+    {
+      "id": "prod_baa62956d1f05ea4",
+      "name": "Cino",
+      "url": "https://www.getcino.com/post/tricount-vs-splitwise",
+      "positioning": "Cino splits bills automatically using shared virtual cards linked to users’ bank cards.",
+      "target_users": "Tech‑savvy groups wanting automatic settlement",
+      "store_ids": {
+        "google_play": null,
+        "app_store": null
+      },
+      "reason": "Presented as a novel Splitwise alternative that removes manual settlement steps.",
+      "is_incumbent": false
+    },
+    {
+      "id": "prod_d985b742ebf7c523",
+      "name": "FairShare",
+      "url": "https://fairshareapp.co.in/blog/top-5-splitwise-alternatives-india.html",
+      "positioning": "FairShare is an Indian bill‑splitting app with native UPI deep‑linking and free AI receipt scanning.",
+      "target_users": "Indian flatmates, roommates, travelers",
+      "store_ids": {
+        "google_play": null,
+        "app_store": null
+      },
+      "reason": "Specifically highlighted for India with unlimited transactions and UPI settlement.",
+      "is_incumbent": false
+    }
+  ],
+  "rejected": []
+}

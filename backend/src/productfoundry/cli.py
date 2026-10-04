@@ -100,6 +100,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    for stream in (sys.stdout, sys.stderr):
+        # Product names and reviews are not limited to the console's code page.
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     if args.command is None:
         parser.print_help()
         return 0

@@ -203,8 +203,8 @@ planned; until then this is stated in the UI and the README.
 
 | Source | Data | Access | Built in |
 |---|---|---|---|
-| Google Play | Reviews, ratings, download ranges | Public pages via a scraper library. Only the app details page is read so far; review access is open (BUILD_SPEC.md D8) | Milestone 1 |
-| Apple App Store | Reviews, ratings | Lookup: Apple's iTunes Search API. Reviews: public RSS feeds, access open (BUILD_SPEC.md D8) | Milestone 1 |
+| Google Play | Reviews, ratings, download ranges | Public pages via a scraper library. Lookup reads the app details page. Reviews are an exception to robots.txt (see below) | Milestone 1 |
+| Apple App Store | Reviews, ratings | Lookup: Apple's iTunes Search API. Reviews: public RSS feeds, an exception to robots.txt (see below) | Milestone 1 |
 | Web search | Candidate competitors, and the Play id of an app by name | Tavily Search API | Milestone 1 |
 | Reddit | Discussions and complaints | Official API | Milestone 2 |
 | Product Hunt | Launches and comments | Official API | Milestone 2 |
@@ -217,6 +217,15 @@ Rules for every adapter:
 
 - Respect rate limits and robots.txt. A page that disallows fetching is skipped
   and reported, not worked around.
+- **Exception (owner's decision D8, 2026-10-04): store reviews.** Google Play's
+  robots.txt disallows the paths the scraper library uses for reviews (`/_/`,
+  `/store/getreviews`) and Apple's disallows the customer-reviews feed
+  (`/*/rss/*`). The owner accepts this for review collection only, because
+  there is no free permitted route to competitor reviews. Conditions: requests
+  are rate limited, capped per product and store, incremental (only newer
+  reviews on later runs), and no username or profile link is stored. The
+  exception covers nothing else: search pages and every other disallowed path
+  stay off limits.
 - Stored reviews keep the source URL, date, rating, language and text. Usernames
   and profile links are dropped before storage.
 - Outputs quote reviews briefly as evidence, never in bulk.
@@ -291,6 +300,7 @@ Targets start loose and tighten once a baseline exists.
 | LLM providers | Free providers only, behind LiteLLM | The architecture diagram says "free + paid"; paid models arrive only with bring-your-own-key |
 | Web search API | Tavily (owner's decision D1, 2026-10-04) | Official API with a recurring free tier and no card |
 | Finding a Play app by name | Through the web search API restricted to play.google.com, then the app's details page | Play's robots.txt disallows `/store/search`; the details page is allowed |
+| Store reviews and robots.txt | Fetched as a stated exception (owner's decision D8, 2026-10-04) | See section 8. The alternatives were a paid licensed provider or importing files by hand |
 | Review languages | English and Hinglish from the MVP (owner's decision, 2026-10-04). Other languages, including Hindi in Devanagari, are stored and flagged but not analysed | India-specific insight is a stated differentiator, and many Indian app reviews are Hinglish. See section 6.1 |
 
 ## 13. Open questions
@@ -303,5 +313,3 @@ BUILD_SPEC.md.
   multi-user support to build.
 - Which traffic-estimate provider fits the budget, if any?
 - Which 3 products are the first test set, and which 10 form the evaluation set?
-- How are store reviews collected, given that the stores' robots.txt files
-  disallow the review endpoints (BUILD_SPEC.md D8)?
