@@ -7,7 +7,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from productfoundry import __version__
+from productfoundry import __version__, runtime
 from productfoundry.core.base import schema_version_of
 from productfoundry.core.errors import ProductFoundryError
 from productfoundry.core.registry import SCHEMAS
@@ -17,10 +17,7 @@ from productfoundry.orchestrator import (
     Orchestrator,
     RunRecord,
     RunStore,
-    Services,
 )
-from productfoundry.orchestrator.checkpoints import edit_competitors, edit_pain_points
-from productfoundry.stages.fakes import FAKE_STAGES
 
 DEFAULT_STATE_FILE = Path(".productfoundry") / "runs.json"
 
@@ -118,13 +115,13 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("run_id")
     report.add_argument("--format", choices=["md", "json"], default="md")
     report.add_argument("--out", type=Path, help="write to this file instead of printing")
-    report.set_defaults(handler=_cmd_report)
+    report.set_defaults(handler=_cmd_export)
 
     prd = commands.add_parser("prd", help="export the PRD of a run, with its citations")
     prd.add_argument("run_id")
     prd.add_argument("--format", choices=["md", "json"], default="md")
     prd.add_argument("--out", type=Path, help="write to this file instead of printing")
-    prd.set_defaults(handler=_cmd_prd)
+    prd.set_defaults(handler=_cmd_export)
 
     tasks = commands.add_parser(
         "tasks", help="export the task plan of a run, with its acceptance criteria"
@@ -132,7 +129,16 @@ def build_parser() -> argparse.ArgumentParser:
     tasks.add_argument("run_id")
     tasks.add_argument("--format", choices=["md", "json"], default="md")
     tasks.add_argument("--out", type=Path, help="write to this file instead of printing")
-    tasks.set_defaults(handler=_cmd_tasks)
+    tasks.set_defaults(handler=_cmd_export)
+
+    serve = commands.add_parser("serve", help="run the HTTP API (the worker runs in Docker)")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    serve.set_defaults(handler=_cmd_serve)
+
+    openapi = commands.add_parser("openapi", help="print or write the API's OpenAPI schema")
+    openapi.add_argument("--out", type=Path, help="write to this file instead of printing")
+    openapi.set_defaults(handler=_cmd_openapi)
 
     db = commands.add_parser("db", help="manage the database")
     db.add_argument("action", choices=["upgrade"], help="upgrade: apply the migrations")
@@ -197,77 +203,9 @@ def _open_store(args: argparse.Namespace) -> Iterator[RunStore]:
 
 
 def _orchestrator(args: argparse.Namespace, store: RunStore) -> Orchestrator:
-    """Real stages where they exist, stand-ins for the rest. Call inside `_open_store`."""
-    if args.fake_stages:
-        return Orchestrator(store, FAKE_STAGES)
-    from productfoundry.stages.s1_competitors import competitors_stage
-    from productfoundry.stages.s2_reviews import ReviewSettings, ReviewStage
-    from productfoundry.stages.s3_pain_points import pain_points_stage
-    from productfoundry.stages.s4_prd import prd_stage
-    from productfoundry.stages.s5_tasks import tasks_stage
-    from productfoundry.stages.s6_roadmap import roadmap_stage
-    from productfoundry.stages.s7_acceptance import acceptance_stage
-
-    stages = {
-        "s1_competitors": competitors_stage,
-        "s2_reviews": ReviewStage(ReviewSettings(cap_per_store=args.review_cap)),
-        "s3_pain_points": pain_points_stage,
-        "s4_prd": prd_stage,
-        "s5_tasks": tasks_stage,
-        "s6_roadmap": roadmap_stage,
-        "s7_acceptance": acceptance_stage,
-    }
-    return Orchestrator(store, stages, services=_services(args))
-
-
-def _evidence_stores(args: argparse.Namespace):
-    """The review and cluster stores. Call inside `_open_store`."""
-    if args.sessions is not None:
-        from productfoundry import storage
-
-        return storage.ReviewRepository(args.sessions), storage.PostgresClusterStore(args.sessions)
-    from productfoundry.storage.memory import InMemoryClusterStore, InMemoryReviewStore
-
-    # With --memory, reviews and clusters last only for this command.
-    return InMemoryReviewStore(), InMemoryClusterStore()
-
-
-def _services(args: argparse.Namespace) -> Services:
-    from productfoundry import llm, storage
-    from productfoundry.llm.fakes import InMemoryCallStore, InMemoryUsageStore
-    from productfoundry.ml.config import load_config
-    from productfoundry.ml.embeddings import SentenceTransformerEmbedder
-    from productfoundry.settings import Settings
-    from productfoundry.sources.app_store import AppStoreLookup
-    from productfoundry.sources.app_store.reviews import AppStoreReviews
-    from productfoundry.sources.google_play import GooglePlayLookup
-    from productfoundry.sources.google_play.reviews import GooglePlayReviews
-    from productfoundry.sources.robots import Robots
-    from productfoundry.sources.search.tavily import TavilySearch
-
-    settings = Settings()
-    routing = llm.load_routing()
-    reviews, clusters = _evidence_stores(args)
-    if args.sessions is not None:
-        calls = storage.PostgresCallStore(args.sessions)
-        usage = storage.PostgresUsageStore(args.sessions)
-    else:
-        calls, usage = InMemoryCallStore(), InMemoryUsageStore()
-    gateway = llm.Gateway(routing, llm.live_providers(routing, settings), calls, usage)
-
-    search = None
-    lookups = {"app_store": AppStoreLookup()}
-    if settings.tavily_api_key and settings.tavily_api_key.get_secret_value():
-        search = TavilySearch(settings.tavily_api_key.get_secret_value())
-        lookups["google_play"] = GooglePlayLookup(search, Robots())
-    return Services(
-        llm=gateway,
-        search=search,
-        app_lookups=lookups,
-        review_sources={"google_play": GooglePlayReviews(), "app_store": AppStoreReviews()},
-        reviews=reviews,
-        clusters=clusters,
-        embedder=SentenceTransformerEmbedder(load_config().embeddings),
+    """Real stages, or stand-ins with --fake-stages. Call inside `_open_store`."""
+    return runtime.build_orchestrator(
+        store, args.sessions, fake_stages=args.fake_stages, review_cap=args.review_cap
     )
 
 
@@ -322,30 +260,17 @@ def _cmd_approve(args: argparse.Namespace) -> int:
     with _open_store(args) as store:
         orchestrator = _orchestrator(args, store)
         run = store.get(args.run_id)
-        pain_point_edit = args.rename or args.merge or args.drop or args.rank
-        if (args.remove or added or pain_point_edit) and edited is not None:
-            raise ProductFoundryError("use --edit alone, or the checkpoint options alone")
-        if args.remove or added:
-            if not isinstance(added, list):
-                raise ProductFoundryError(f"{args.add} must hold a JSON list of competitors")
-            stage = run.stage("s1_competitors")
-            if stage.status != "awaiting_approval":
-                raise ProductFoundryError("--remove and --add apply to the competitor checkpoint")
-            edited = edit_competitors(stage.output, remove=args.remove, add=added)
-        if pain_point_edit:
-            stage = run.stage("s3_pain_points")
-            if stage.status != "awaiting_approval":
-                raise ProductFoundryError(
-                    "--rename, --merge, --drop and --rank apply to the pain-point checkpoint"
-                )
-            edited = edit_pain_points(
-                stage.output,
-                rename=dict(_label(item) for item in args.rename),
-                merge=[item.split(",") for item in args.merge],
-                drop=args.drop,
-                rank=args.rank.split(",") if args.rank else (),
-            )
-        if edited is not None and run.stage("s3_pain_points").status == "awaiting_approval":
+        edited = runtime.checkpoint_edit(
+            run,
+            edited=edited,
+            remove=args.remove,
+            add=added,
+            rename=dict(_label(item) for item in args.rename),
+            merge=[item.split(",") for item in args.merge],
+            drop=args.drop,
+            rank=args.rank.split(",") if args.rank else (),
+        )
+        if edited is not None and runtime.waiting_at(run, "s3_pain_points"):
             _check_pain_point_edit(args, run, edited)
         orchestrator.approve(args.run_id, edited)
         run = orchestrator.resume(args.run_id)
@@ -361,7 +286,6 @@ def _label(item: str) -> tuple[str, str]:
 
 
 def _check_pain_point_edit(args: argparse.Namespace, run: RunRecord, edited: object) -> None:
-    """An edited report must still match the stored clusters and reviews."""
     if args.fake_stages:
         return  # stand-in output cites reviews that do not exist
     if args.sessions is None:
@@ -369,92 +293,14 @@ def _check_pain_point_edit(args: argparse.Namespace, run: RunRecord, edited: obj
             "an edited pain-point report is checked against the stored reviews, "
             "which --memory does not keep; approve it unchanged or use the database"
         )
-    from productfoundry.core.competitors import CompetitorList
-    from productfoundry.core.pain_points import PainPointReport
-    from productfoundry.stages.s3_pain_points import run_reviews
-    from productfoundry.stages.s3_pain_points.validation import check_report
-
-    try:
-        report = PainPointReport.model_validate(edited)
-    except ValidationError:
-        return  # approval reports schema errors
-    reviews, clusters = _evidence_stores(args)
-    competitors = CompetitorList.model_validate(run.stage("s1_competitors").effective_output)
-    _, stored = run_reviews(competitors, reviews)
-    check_report(report, clusters.for_run(run.id), stored, ranked_by_score=False)
+    runtime.check_pain_point_edit(run, edited, *runtime.evidence_stores(args.sessions))
 
 
-def _stage_output(run: RunRecord, key: str, name: str) -> dict:
-    stages = {record.key: record for record in run.stages}
-    output = stages[key].effective_output if key in stages else None
-    if output is None:
-        raise ProductFoundryError(f"run {run.id} has no {name} yet")
-    return output
-
-
-def _cmd_report(args: argparse.Namespace) -> int:
-    from productfoundry.stages.s3_pain_points.export import export_report, render_markdown
-
+def _cmd_export(args: argparse.Namespace) -> int:
     with _open_store(args) as store:
         run = store.get(args.run_id)
-        report, names, reviews = _evidence(args, run)
-        export = export_report(report, reviews, names, title=_title(run))
-    return _write_export(args, export, render_markdown)
-
-
-def _cmd_prd(args: argparse.Namespace) -> int:
-    from productfoundry.core.prd import Prd
-    from productfoundry.stages.s4_prd.export import export_prd, render_prd_markdown
-
-    with _open_store(args) as store:
-        run = store.get(args.run_id)
-        prd = Prd.model_validate(_stage_output(run, "s4_prd", "PRD"))
-        report, names, reviews = _evidence(args, run)
-        export = export_prd(prd, report, reviews, names, title=run.input.idea)
-    return _write_export(args, export, render_prd_markdown)
-
-
-def _cmd_tasks(args: argparse.Namespace) -> int:
-    from productfoundry.core.acceptance import AcceptanceCriteria
-    from productfoundry.core.prd import Prd
-    from productfoundry.core.tasks import TaskPlan
-    from productfoundry.stages.s5_tasks.export import export_tasks, render_tasks_markdown
-
-    with _open_store(args) as store:
-        run = store.get(args.run_id)
-        plan = TaskPlan.model_validate(_stage_output(run, "s5_tasks", "task plan"))
-        prd = Prd.model_validate(_stage_output(run, "s4_prd", "PRD"))
-    stages = {record.key: record for record in run.stages}
-    criteria = None
-    if "s7_acceptance" in stages and stages["s7_acceptance"].effective_output is not None:
-        criteria = AcceptanceCriteria.model_validate(stages["s7_acceptance"].effective_output)
-    export = export_tasks(plan, prd, title=run.input.idea, criteria=criteria)
-    return _write_export(args, export, render_tasks_markdown)
-
-
-def _title(run: RunRecord) -> str:
-    return run.input.incumbent.name if run.input.incumbent else run.input.idea
-
-
-def _evidence(args: argparse.Namespace, run: RunRecord):
-    """The run's approved pain-point report, its product names and its stored reviews."""
-    output = _stage_output(run, "s3_pain_points", "pain-point report")
-    if args.sessions is None:
-        raise ProductFoundryError("the export quotes stored reviews, which --memory does not keep")
-    from productfoundry.core.competitors import CompetitorList
-    from productfoundry.core.pain_points import PainPointReport
-    from productfoundry.stages.s3_pain_points import run_reviews
-
-    competitors = CompetitorList.model_validate(run.stage("s1_competitors").effective_output)
-    names, reviews = run_reviews(competitors, _evidence_stores(args)[0])
-    return PainPointReport.model_validate(output), names, reviews
-
-
-def _write_export(args: argparse.Namespace, export: dict, render) -> int:
-    if args.format == "json":
-        text = json.dumps(export, indent=2, ensure_ascii=False) + "\n"
-    else:
-        text = render(export)
+        reviews = runtime.evidence_stores(args.sessions)[0] if args.sessions is not None else None
+        text = runtime.export(run, args.command, args.format, reviews)
     if args.out is None:
         print(text, end="")
     else:
@@ -471,6 +317,32 @@ def _cmd_resume(args: argparse.Namespace) -> int:
     with _open_store(args) as store:
         run = _orchestrator(args, store).resume(args.run_id, from_stage=args.from_stage)
     _print_run(run)
+    return 0
+
+
+def _cmd_serve(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    from productfoundry.api import create_app
+
+    uvicorn.run(create_app(), host=args.host, port=args.port)
+    return 0
+
+
+def openapi_text() -> str:
+    """The OpenAPI schema as committed in backend/openapi.json."""
+    from productfoundry.api import create_app
+
+    return json.dumps(create_app().openapi(), indent=2, sort_keys=True) + "\n"
+
+
+def _cmd_openapi(args: argparse.Namespace) -> int:
+    text = openapi_text()
+    if args.out is None:
+        print(text, end="")
+    else:
+        args.out.write_text(text, encoding="utf-8")
+        print(args.out)
     return 0
 
 

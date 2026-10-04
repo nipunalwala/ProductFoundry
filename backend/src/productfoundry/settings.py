@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     # Web search for competitor discovery (decision D1: Tavily).
     tavily_api_key: SecretStr | None = None
 
+    # The job queue (docker-compose.yml). Port 6380 on the host, like the database's 5433,
+    # keeps clear of a Redis that may already run on the development machine.
+    redis_url: str = "redis://127.0.0.1:6380/0"
+    # The worker and the API run every stage as a stand-in: no search, store or LLM request.
+    fake_stages: bool = False
+
     def sqlalchemy_url(self) -> URL:
         if self.database_url:
             return make_url(self.database_url)

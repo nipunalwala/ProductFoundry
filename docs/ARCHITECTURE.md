@@ -56,9 +56,11 @@ FastAPI + job queue   orchestrator: owns runs, runs stages, pauses at (C)
                            PH, pricing    snapshots
 ```
 
-Until the API exists (phase 13), the orchestrator is driven from a CLI in the
-same process. The API and the queue are a second way to drive the same
-orchestrator, not a second implementation.
+The orchestrator can be driven two ways. The CLI runs it in-process. The API
+creates and approves runs and puts the work on the queue; the worker runs the
+same orchestrator. Both are wired in `productfoundry/runtime.py`, so there is
+one implementation. A scheduled job in the worker re-queues runs paused for
+quota after the daily reset.
 
 ## 4. Repository layout
 

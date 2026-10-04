@@ -15,5 +15,35 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Runs the stages of queued runs with the same orchestrator the CLI uses. RQ's worker
+  # does not run natively on Windows, so it lives here.
+  worker:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-productfoundry}:${POSTGRES_PASSWORD:-productfoundry}@db:5432/${POSTGRES_DB:-productfoundry}
+      REDIS_URL: redis://redis:6379/0
+      FAKE_STAGES: ${FAKE_STAGES:-false}
+    volumes:
+      - model-cache:/root/.cache/huggingface
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   db-data:
+  model-cache:

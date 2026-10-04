@@ -1,0 +1,1110 @@
+{
+  "components": {
+    "schemas": {
+      "Approve": {
+        "additionalProperties": false,
+        "description": "Approve the checkpoint as it is, with a whole edited output, or with edits.",
+        "properties": {
+          "competitors": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompetitorEdits"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "edited_output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited Output"
+          },
+          "pain_points": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PainPointEdits"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "Approve",
+        "type": "object"
+      },
+      "CompetitorEdits": {
+        "additionalProperties": false,
+        "properties": {
+          "add": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Add",
+            "type": "array"
+          },
+          "remove": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Remove",
+            "type": "array"
+          }
+        },
+        "title": "CompetitorEdits",
+        "type": "object"
+      },
+      "CreateRun": {
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "$ref": "#/components/schemas/RunInput"
+          },
+          "seed": {
+            "default": 0,
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "input"
+        ],
+        "title": "CreateRun",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "Health",
+        "type": "object"
+      },
+      "Incumbent": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "store_ids": {
+            "$ref": "#/components/schemas/StoreIds",
+            "default": {}
+          },
+          "urls": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Urls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Incumbent",
+        "type": "object"
+      },
+      "Mode": {
+        "enum": [
+          "new_idea",
+          "alternative",
+          "new_feature"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "PainPointEdits": {
+        "additionalProperties": false,
+        "description": "Pain points are named by their rank in the stage's output, or by cluster id.",
+        "properties": {
+          "drop": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Drop",
+            "type": "array"
+          },
+          "merge": {
+            "default": [],
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Merge",
+            "type": "array"
+          },
+          "rank": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Rank",
+            "type": "array"
+          },
+          "rename": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "title": "Rename",
+            "type": "object"
+          }
+        },
+        "title": "PainPointEdits",
+        "type": "object"
+      },
+      "Platform": {
+        "enum": [
+          "android",
+          "ios",
+          "web"
+        ],
+        "title": "Platform",
+        "type": "string"
+      },
+      "Problem": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "Resume": {
+        "additionalProperties": false,
+        "properties": {
+          "from_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Stage"
+          }
+        },
+        "title": "Resume",
+        "type": "object"
+      },
+      "RunInput": {
+        "additionalProperties": false,
+        "properties": {
+          "idea": {
+            "minLength": 1,
+            "title": "Idea",
+            "type": "string"
+          },
+          "incumbent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Incumbent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "known_competitors": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Known Competitors",
+            "type": "array"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/Mode"
+          },
+          "platforms": {
+            "items": {
+              "$ref": "#/components/schemas/Platform"
+            },
+            "minItems": 1,
+            "title": "Platforms",
+            "type": "array"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "target_users": {
+            "minLength": 1,
+            "title": "Target Users",
+            "type": "string"
+          },
+          "tech_stack": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Tech Stack",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "idea",
+          "target_users",
+          "platforms",
+          "region"
+        ],
+        "title": "RunInput",
+        "type": "object"
+      },
+      "RunStatus": {
+        "enum": [
+          "pending",
+          "running",
+          "awaiting_approval",
+          "paused_quota",
+          "failed",
+          "completed"
+        ],
+        "title": "RunStatus",
+        "type": "string"
+      },
+      "RunSummary": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "idea": {
+            "title": "Idea",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "idea",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "RunSummary",
+        "type": "object"
+      },
+      "RunView": {
+        "properties": {
+          "awaiting_approval": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Awaiting Approval"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "idea": {
+            "title": "Idea",
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/RunInput"
+          },
+          "pause_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pause Reason"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageView"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "idea",
+          "created_at",
+          "updated_at",
+          "input",
+          "seed",
+          "error",
+          "pause_reason",
+          "awaiting_approval",
+          "stages"
+        ],
+        "title": "RunView",
+        "type": "object"
+      },
+      "StageOutputView": {
+        "properties": {
+          "edited": {
+            "title": "Edited",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "original_output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Output"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StageStatus"
+          }
+        },
+        "required": [
+          "key",
+          "status",
+          "schema_version",
+          "edited",
+          "output",
+          "original_output"
+        ],
+        "title": "StageOutputView",
+        "type": "object"
+      },
+      "StageStatus": {
+        "enum": [
+          "pending",
+          "running",
+          "awaiting_approval",
+          "failed",
+          "completed"
+        ],
+        "title": "StageStatus",
+        "type": "string"
+      },
+      "StageView": {
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "checkpoint": {
+            "title": "Checkpoint",
+            "type": "boolean"
+          },
+          "edited": {
+            "title": "Edited",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "has_output": {
+            "title": "Has Output",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StageStatus"
+          }
+        },
+        "required": [
+          "key",
+          "number",
+          "status",
+          "checkpoint",
+          "has_output",
+          "edited",
+          "schema_version",
+          "error",
+          "started_at",
+          "finished_at",
+          "approved_at"
+        ],
+        "title": "StageView",
+        "type": "object"
+      },
+      "StoreIds": {
+        "additionalProperties": false,
+        "properties": {
+          "app_store": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Store"
+          },
+          "google_play": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Google Play"
+          }
+        },
+        "title": "StoreIds",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Start, watch and approve runs. Long stages run in the queue worker.",
+    "title": "ProductFoundry",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/runs": {
+      "get": {
+        "description": "Every run, newest first.",
+        "operationId": "list_runs_runs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunSummary"
+                  },
+                  "title": "Response List Runs Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Runs"
+      },
+      "post": {
+        "description": "Create a run and queue it. It stops at the first checkpoint.",
+        "operationId": "create_run_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRun"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Create Run"
+      }
+    },
+    "/runs/{run_id}": {
+      "get": {
+        "description": "A run with the status of each stage. `paused_quota` is a pause, not a failure.",
+        "operationId": "get_run_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Run"
+      }
+    },
+    "/runs/{run_id}/approve": {
+      "post": {
+        "description": "Approve the open checkpoint, unchanged or edited, and queue the rest of the run.",
+        "operationId": "approve_runs__run_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Approve"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Approve"
+      }
+    },
+    "/runs/{run_id}/exports/{name}": {
+      "get": {
+        "description": "The pain-point report, the PRD or the task plan, as Markdown or JSON.",
+        "operationId": "download_export_runs__run_id__exports__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "enum": [
+                "report",
+                "prd",
+                "tasks"
+              ],
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "md",
+              "enum": [
+                "md",
+                "json"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/markdown": {}
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Download Export"
+      }
+    },
+    "/runs/{run_id}/resume": {
+      "post": {
+        "description": "Queue a paused or failed run again, or run it again from a named stage.",
+        "operationId": "resume_runs__run_id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Resume"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Resume"
+      }
+    },
+    "/runs/{run_id}/stages/{stage_key}": {
+      "get": {
+        "operationId": "get_stage_output_runs__run_id__stages__stage_key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "stage_key",
+            "required": true,
+            "schema": {
+              "title": "Stage Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageOutputView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Stage Output"
+      }
+    }
+  }
+}

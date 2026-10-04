@@ -36,6 +36,10 @@ class Orchestrator:
         self._services = services or Services()
         self._clock = clock
 
+    @property
+    def stage_keys(self) -> list[str]:
+        return [spec.key for spec in self._pipeline]
+
     def create_run(self, run_input: RunInput, *, seed: int = 0) -> RunRecord:
         now = self._clock()
         run = RunRecord(

@@ -63,6 +63,20 @@ requirement with the pain points or market gaps it cites, and
 `productfoundry tasks RUN_ID` exports the task plan in build order, each task
 with its acceptance criteria.
 
+## API and worker
+
+```
+docker compose up -d db redis worker        # the worker runs queued stages
+cd backend
+py -m uv run productfoundry serve            # the API on http://127.0.0.1:8000
+```
+
+Interactive docs are at `/docs`; the schema is `backend/openapi.json`
+(`productfoundry openapi --out openapi.json` rewrites it). The API only creates,
+approves and reads runs; the worker runs the stages. Set `FAKE_STAGES=true` for
+both to try the flow with stand-in stages and no outside request. Redis listens
+on `127.0.0.1:6380`.
+
 ## Test
 
 From `backend/`:
