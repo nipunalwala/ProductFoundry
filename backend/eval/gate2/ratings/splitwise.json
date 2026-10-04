@@ -1,0 +1,376 @@
+{
+  "run_id": "run_3acb37dc630f4f8d",
+  "owner_notes": null,
+  "tasks": [
+    {
+      "task_id": "task_001",
+      "title": "Design and implement local data model",
+      "description": "Design and implement the local data model for expenses, participants, and split types. Define tables or objects that store amount, date, payer, participants, and split method. Done when the model can be persisted and queried without errors.",
+      "effort": "S",
+      "depends_on": [],
+      "requirement_ids": [
+        "req_001",
+        "req_002",
+        "req_004",
+        "req_005"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "A fresh installation with an empty local database",
+          "when": "The user creates an expense of 250.00 INR dated today, payer A, participants B and C, split equally and taps Save",
+          "then": "The expense record is persisted and a query returns the record with amount 250.00 INR and split amounts of 83.33 INR for each participant",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "An expense of 0.01 INR is entered with percentage split of 50% to A and 50% to B",
+          "when": "The user saves the expense",
+          "then": "The record is stored and the calculated split amounts are 0.005 INR each, summing to the original amount",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "The local storage transaction is forced to fail (e.g., disk full)",
+          "when": "The user attempts to save a new expense",
+          "then": "The app returns an error message and no partial expense record appears in the database",
+          "testable": null
+        }
+      ]
+    },
+    {
+      "task_id": "task_003",
+      "title": "Validate no daily‑limit enforcement",
+      "description": "Add backend validation logic that explicitly checks for and rejects any artificial daily‑limit enforcement. Verify that no limit checks are present in the expense‑creation pathway. Done when automated tests confirm unlimited entries are allowed.",
+      "effort": "XS",
+      "depends_on": [
+        "task_001"
+      ],
+      "requirement_ids": [
+        "req_001",
+        "req_003"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "The automated test harness can call the expense‑creation API",
+          "when": "It creates 100 expenses for the same user on the same calendar day",
+          "then": "All 100 expenses are stored and a subsequent query returns exactly 100 records",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "An expense is entered with a future date (tomorrow)",
+          "when": "The expense is saved",
+          "then": "The expense is persisted and no daily‑limit error is returned",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "The backend validation layer contains a legacy check that throws \"Daily limit exceeded\" after 10 entries",
+          "when": "The 11th expense of the day is submitted",
+          "then": "The request succeeds (status 200) indicating the limit check is not active",
+          "testable": null
+        }
+      ]
+    },
+    {
+      "task_id": "task_004",
+      "title": "Build core calculation engine",
+      "description": "Build the core calculation engine that computes total amounts and each user's balance based on stored expenses and split configurations. Ensure it handles floating‑point precision appropriately for INR. Done when the engine returns correct balances for a set of test expenses.",
+      "effort": "M",
+      "depends_on": [
+        "task_001"
+      ],
+      "requirement_ids": [
+        "req_002",
+        "req_004"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "Three users have recorded expenses: ₹120.00 split equally among them",
+          "when": "the core calculation engine processes the expenses",
+          "then": "each user balance is ₹40.00 and the total matches ₹120.00",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "An expense of ₹0.10 is split among three users",
+          "when": "the engine calculates each share",
+          "then": "each share is rounded to ₹0.03 and the sum of shares equals the original ₹0.10",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "An expense references a user ID that does not exist in the system",
+          "when": "the engine attempts to compute balances",
+          "then": "it returns an error stating \"Invalid user reference\" and no balances are updated",
+          "testable": null
+        }
+      ]
+    },
+    {
+      "task_id": "task_005",
+      "title": "Implement splitting logic",
+      "description": "Implement splitting logic for equal shares, percentages, and exact amounts, integrating it with the calculation engine. Support mixed split types within a single expense. Done when the engine correctly applies each split method and produces accurate individual shares.",
+      "effort": "M",
+      "depends_on": [
+        "task_004"
+      ],
+      "requirement_ids": [
+        "req_002",
+        "req_004",
+        "req_005"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "An expense of ₹300.00 with three participants, split by percentages 40%, 30%, 30%",
+          "when": "the splitting logic is applied",
+          "then": "the engine assigns ₹120.00, ₹90.00 and ₹90.00 respectively and the totals sum to ₹300.00",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "A single expense of ₹200.00 where two participants are set to exact amounts ₹150.00 and ₹30.00 and the third is set to equal share",
+          "when": "the mixed split is processed",
+          "then": "the engine allocates ₹150.00, ₹30.00 and ₹20.00 to the third participant, respecting the remaining balance",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "An expense of ₹100.00 with split percentages 70% and 40% (total 110%)",
+          "when": "the engine validates the split configuration",
+          "then": "it rejects the expense with an error \"Split percentages must total 100%\"",
+          "testable": null
+        }
+      ]
+    },
+    {
+      "task_id": "task_006",
+      "title": "Wire real‑time balance updates",
+      "description": "Wire the calculation engine to update balances in real‑time after each expense is added or modified. Show loading states and handle errors gracefully. Done when balances refresh instantly after a save operation.",
+      "effort": "S",
+      "depends_on": [
+        "task_005"
+      ],
+      "requirement_ids": [
+        "req_002",
+        "req_004"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "User adds a new expense of ₹250.00 and taps Save",
+          "when": "the save operation succeeds",
+          "then": "the UI instantly displays the updated balances for all participants without requiring a page refresh",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "The network latency is artificially delayed to 5 seconds during a save",
+          "when": "the user presses Save",
+          "then": "a loading spinner is shown during the delay and balances update correctly once the response arrives",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "The server returns HTTP 500 during the save request",
+          "when": "the save operation is attempted",
+          "then": "an error toast \"Unable to save expense\" appears and previously displayed balances remain unchanged",
+          "testable": null
+        }
+      ]
+    },
+    {
+      "task_id": "task_007",
+      "title": "Write unit tests for calculations",
+      "description": "Write a comprehensive suite of unit tests covering calculation accuracy, split methods, and edge cases like zero amounts or 100% percentages. Achieve ≥90% coverage for the calculation module. Done when all tests pass on CI.",
+      "effort": "S",
+      "depends_on": [
+        "task_006"
+      ],
+      "requirement_ids": [
+        "req_002"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "The CI pipeline runs the unit‑test suite for the calculation module",
+          "when": "all tests execute without failures",
+          "then": "the coverage report shows at least 90% overall and the build passes",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "A test case creates an expense of ₹0.00 split equally among four users",
+          "when": "the test runs",
+          "then": "the assertion verifies that all user balances remain ₹0.00 and the test passes",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "A newly added test triggers a division‑by‑zero error in the calculation code",
+          "when": "the CI runs the suite",
+          "then": "the build fails, the error stack trace is logged, and the failure is reported in the CI dashboard",
+          "testable": null
+        }
+      ]
+    },
+    {
+      "task_id": "task_008",
+      "title": "Design UI screens",
+      "description": "Design the UI screens for expense list, split options, and balance overview, following a simple, clean style suitable for Indian users. Produce mockups and get stakeholder sign‑off. Done when designs are ready for implementation.",
+      "effort": "S",
+      "depends_on": [
+        "task_001"
+      ],
+      "requirement_ids": [
+        "req_004",
+        "req_005"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "Design mockup files for expense list, split options, and balance overview are prepared in Figma",
+          "when": "the product stakeholder reviews the mockups and clicks the \"Approve\" button",
+          "then": "the mockup status changes to \"Approved\" and the design team receives a notification",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "The mockup includes currency symbols for Indian Rupee (₹) but the stakeholder prefers a different locale format",
+          "when": "the stakeholder requests the currency to be displayed as \"INR 1,000\" instead of \"₹1,000\"",
+          "then": "the design is updated to show the requested format and the stakeholder re‑approves without additional comments",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "The design files are uploaded to the shared repository without the balance overview screen",
+          "when": "the design review meeting starts",
+          "then": "the reviewer raises a missing‑screen defect and the task is marked as not ready for implementation",
+          "testable": null
+        }
+      ]
+    },
+    {
+      "task_id": "task_009",
+      "title": "Implement balance display",
+      "description": "Implement the balance display screen that lists each user and the amount they owe or are owed, with clear colour coding. Ensure data is pulled from the calculation engine. Done when the screen shows correct balances after any expense change.",
+      "effort": "S",
+      "depends_on": [
+        "task_008",
+        "task_006"
+      ],
+      "requirement_ids": [
+        "req_004"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "A group of three users has recorded an expense of 1500 INR split equally",
+          "when": "the user opens the balance display screen",
+          "then": "the screen lists each user with a colour‑coded amount of +500 INR for the payer and -250 INR for each of the other two users",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "All users have settled all expenses and their net balances are zero",
+          "when": "the user opens the balance display screen",
+          "then": "the screen shows a message \"All balances are settled\" with no coloured amount rows",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "The calculation engine returns an error response when queried for balances",
+          "when": "the balance display screen attempts to load data",
+          "then": "an error banner \"Unable to load balances, please retry\" is shown and a retry button is enabled",
+          "testable": null
+        }
+      ]
+    },
+    {
+      "task_id": "task_011",
+      "title": "Remove subscription prompts",
+      "description": "Audit the entire codebase to ensure no Pro‑subscription prompts or paywalls block access to core expense‑splitting features. Remove or disable any such UI elements. Done when a new user can use all core features without seeing a subscription upsell.",
+      "effort": "XS",
+      "depends_on": [
+        "task_010"
+      ],
+      "requirement_ids": [
+        "req_003"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "A brand‑new user registers an account and navigates to the expense list screen",
+          "when": "the user accesses any core feature such as adding an expense",
+          "then": "no subscription or upgrade prompt is displayed anywhere in the UI",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "An existing user who previously saw a Pro‑upgrade banner logs out and logs back in after the code cleanup",
+          "when": "the user opens the balance overview screen",
+          "then": "the UI still shows no upgrade banner and the previously hidden elements remain absent",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "A leftover UI component with the text \"Upgrade to Pro\" still exists in the code base",
+          "when": "the user performs a screen refresh on any core screen",
+          "then": "the test script detects the element and fails, indicating the subscription prompt was not fully removed",
+          "testable": null
+        }
+      ]
+    },
+    {
+      "task_id": "task_012",
+      "title": "Conduct usability testing",
+      "description": "Conduct usability testing with flatmates and friends in India, observing task completion times and satisfaction scores. Iterate on UI based on feedback to improve simplicity. Done when testing reports indicate high ease‑of‑use and no major confusion.",
+      "effort": "L",
+      "depends_on": [
+        "task_001"
+      ],
+      "requirement_ids": [
+        "req_003",
+        "req_004",
+        "req_005"
+      ],
+      "rating": null,
+      "criteria": [
+        {
+          "kind": "happy_path",
+          "given": "A usability test session with five flatmates in Mumbai is scheduled using the testing platform",
+          "when": "each participant completes the primary task of adding and splitting an expense",
+          "then": "the recorded average task completion time is under 45 seconds and the post‑task satisfaction score averages 8.5 out of 10",
+          "testable": null
+        },
+        {
+          "kind": "edge_case",
+          "given": "A participant from a tier‑2 city takes 70 seconds to complete the same task due to slower device performance",
+          "when": "the session data is reviewed",
+          "then": "the outlier is noted but the overall average remains below the 45‑second threshold and no critical confusion flags are raised",
+          "testable": null
+        },
+        {
+          "kind": "failure_state",
+          "given": "The usability testing tool crashes and does not save video recordings for one participant",
+          "when": "the analyst attempts to export the session data",
+          "then": "an error log is generated and the participant is re‑invited to repeat the task to obtain a complete record",
+          "testable": null
+        }
+      ]
+    }
+  ]
+}

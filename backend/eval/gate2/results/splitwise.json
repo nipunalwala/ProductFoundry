@@ -1,0 +1,14 @@
+{
+  "product": "Splitwise",
+  "run_id": "run_3acb37dc630f4f8d",
+  "requirements": 5,
+  "grounded": 5,
+  "grounding": 1.0,
+  "citations": {
+    "cluster": 3,
+    "market_gap": 2
+  },
+  "pain_points_cited": 2,
+  "reviews_behind_cited_pain_points": 97,
+  "broken_links": []
+}
