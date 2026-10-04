@@ -87,7 +87,7 @@ docs/
 ```
 
 Dependency rule: `core` imports nothing from the project. `stages` import
-`core` and the adapter *interfaces* only. Only `sources/<name>` may know that
+`core`, the adapter *interfaces* and, for stage 3, the `ml` pipeline. Only `sources/<name>` may know that
 source's URLs, HTML or JSON. Only `llm` may import LiteLLM.
 
 ## 5. Run model
@@ -112,7 +112,9 @@ a schema version.
 Rules:
 
 - A stage is a function `(run_input, earlier_outputs, services) -> output`. It
-  does not read or write run state.
+  does not read or write run state. `services` carries the run's id and seed,
+  so that what a stage saves outside its output (the clusters) belongs to the
+  run.
 - The orchestrator validates each output against its schema before saving it. A
   stage output that fails validation fails the stage.
 - At a checkpoint the run stops in `awaiting_approval`. The user approves, or
@@ -143,6 +145,13 @@ Notes:
 - Stage 3 pipeline: embed reviews with sentence-transformers, reduce with UMAP,
   cluster with HDBSCAN, then send only a sample of each cluster to the LLM for
   a label and a severity score. Seeds are fixed so a run is repeatable.
+- Stage 3 ranks pain points by
+  `review_count x (0.5 + 0.5 x negative_share) x severity / 5`. The formula is
+  a pure function and is written in every report. Before a report is accepted,
+  from the stage or from a checkpoint edit, every quote, count and score in it
+  is checked against the saved clusters and the stored reviews.
+- At checkpoint 3 the user can rename, merge, drop and re-rank pain points. A
+  merged pain point lists the clusters it holds and counts all their reviews.
 - "Negative" means sentiment from stage 2. Star rating is stored but is not the
   sentiment.
 - RICE: Reach = cluster size, Impact = severity (later multiplied by the growth

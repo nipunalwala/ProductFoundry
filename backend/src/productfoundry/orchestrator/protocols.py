@@ -4,9 +4,11 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
+from productfoundry.core.clusters import ClusterStore
 from productfoundry.core.reviews import ReviewStore
 from productfoundry.core.run_input import RunInput
 from productfoundry.llm.types import Completer
+from productfoundry.ml.embeddings import Embedder
 from productfoundry.orchestrator.state import RunRecord
 from productfoundry.sources import AppLookup, ReviewSource
 from productfoundry.sources.search import SearchProvider
@@ -16,17 +18,20 @@ from productfoundry.sources.search import SearchProvider
 class Services:
     """What a stage may use besides its inputs: adapters, never run state."""
 
+    run_id: str = ""  # names what the stage saves for this run, such as its clusters
     seed: int = 0
     llm: Completer | None = None
     search: SearchProvider | None = None
     app_lookups: Mapping[str, AppLookup] = field(default_factory=dict)  # by store name
     review_sources: Mapping[str, ReviewSource] = field(default_factory=dict)  # by store name
     reviews: ReviewStore | None = None
+    clusters: ClusterStore | None = None
+    embedder: Embedder | None = None
 
     def for_run(self, run_id: str, seed: int) -> "Services":
-        """The services one run's stages get: its seed, and LLM calls recorded against it."""
+        """The services one run's stages get: its id and seed, and LLM calls recorded against it."""
         llm = self.llm.for_run(run_id) if hasattr(self.llm, "for_run") else self.llm
-        return replace(self, seed=seed, llm=llm)
+        return replace(self, run_id=run_id, seed=seed, llm=llm)
 
 
 class Stage(Protocol):

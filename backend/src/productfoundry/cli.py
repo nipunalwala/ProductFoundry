@@ -19,7 +19,7 @@ from productfoundry.orchestrator import (
     RunStore,
     Services,
 )
-from productfoundry.orchestrator.checkpoints import edit_competitors
+from productfoundry.orchestrator.checkpoints import edit_competitors, edit_pain_points
 from productfoundry.stages.fakes import FAKE_STAGES
 
 DEFAULT_STATE_FILE = Path(".productfoundry") / "runs.json"
@@ -79,6 +79,32 @@ def build_parser() -> argparse.ArgumentParser:
     approve.add_argument(
         "--add", type=Path, help="competitor checkpoint: JSON file with a list of competitors"
     )
+    approve.add_argument(
+        "--rename",
+        action="append",
+        default=[],
+        metavar="N=LABEL",
+        help="pain-point checkpoint: give pain point N a new label (repeatable)",
+    )
+    approve.add_argument(
+        "--merge",
+        action="append",
+        default=[],
+        metavar="N,M",
+        help="pain-point checkpoint: fold pain point M (and more) into N (repeatable)",
+    )
+    approve.add_argument(
+        "--drop",
+        action="append",
+        default=[],
+        metavar="N",
+        help="pain-point checkpoint: drop pain point N (repeatable)",
+    )
+    approve.add_argument(
+        "--rank",
+        metavar="N,M",
+        help="pain-point checkpoint: put these first, in this order; the rest follow by score",
+    )
     approve.set_defaults(handler=_cmd_approve)
 
     resume = commands.add_parser("resume", help="continue a paused or failed run")
@@ -87,6 +113,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--from-stage", metavar="STAGE", help="run this stage again; later stages are invalidated"
     )
     resume.set_defaults(handler=_cmd_resume)
+
+    report = commands.add_parser("report", help="export the pain-point report of a run")
+    report.add_argument("run_id")
+    report.add_argument("--format", choices=["md", "json"], default="md")
+    report.add_argument("--out", type=Path, help="write to this file instead of printing")
+    report.set_defaults(handler=_cmd_report)
 
     db = commands.add_parser("db", help="manage the database")
     db.add_argument("action", choices=["upgrade"], help="upgrade: apply the migrations")
@@ -156,15 +188,33 @@ def _orchestrator(args: argparse.Namespace, store: RunStore) -> Orchestrator:
         return Orchestrator(store, FAKE_STAGES)
     from productfoundry.stages.s1_competitors import competitors_stage
     from productfoundry.stages.s2_reviews import ReviewSettings, ReviewStage
+    from productfoundry.stages.s3_pain_points import pain_points_stage
 
-    reviews = ReviewStage(ReviewSettings(cap_per_store=args.review_cap))
-    stages = FAKE_STAGES | {"s1_competitors": competitors_stage, "s2_reviews": reviews}
+    stages = {
+        "s1_competitors": competitors_stage,
+        "s2_reviews": ReviewStage(ReviewSettings(cap_per_store=args.review_cap)),
+        "s3_pain_points": pain_points_stage,
+    }
     return Orchestrator(store, stages, services=_services(args))
+
+
+def _evidence_stores(args: argparse.Namespace):
+    """The review and cluster stores. Call inside `_open_store`."""
+    if args.sessions is not None:
+        from productfoundry import storage
+
+        return storage.ReviewRepository(args.sessions), storage.PostgresClusterStore(args.sessions)
+    from productfoundry.storage.memory import InMemoryClusterStore, InMemoryReviewStore
+
+    # With --memory, reviews and clusters last only for this command.
+    return InMemoryReviewStore(), InMemoryClusterStore()
 
 
 def _services(args: argparse.Namespace) -> Services:
     from productfoundry import llm, storage
     from productfoundry.llm.fakes import InMemoryCallStore, InMemoryUsageStore
+    from productfoundry.ml.config import load_config
+    from productfoundry.ml.embeddings import SentenceTransformerEmbedder
     from productfoundry.settings import Settings
     from productfoundry.sources.app_store import AppStoreLookup
     from productfoundry.sources.app_store.reviews import AppStoreReviews
@@ -172,17 +222,15 @@ def _services(args: argparse.Namespace) -> Services:
     from productfoundry.sources.google_play.reviews import GooglePlayReviews
     from productfoundry.sources.robots import Robots
     from productfoundry.sources.search.tavily import TavilySearch
-    from productfoundry.storage.memory import InMemoryReviewStore
 
     settings = Settings()
     routing = llm.load_routing()
+    reviews, clusters = _evidence_stores(args)
     if args.sessions is not None:
         calls = storage.PostgresCallStore(args.sessions)
         usage = storage.PostgresUsageStore(args.sessions)
-        reviews = storage.ReviewRepository(args.sessions)
     else:
-        # With --memory, reviews last only for this command.
-        calls, usage, reviews = InMemoryCallStore(), InMemoryUsageStore(), InMemoryReviewStore()
+        calls, usage = InMemoryCallStore(), InMemoryUsageStore()
     gateway = llm.Gateway(routing, llm.live_providers(routing, settings), calls, usage)
 
     search = None
@@ -196,6 +244,8 @@ def _services(args: argparse.Namespace) -> Services:
         app_lookups=lookups,
         review_sources={"google_play": GooglePlayReviews(), "app_store": AppStoreReviews()},
         reviews=reviews,
+        clusters=clusters,
+        embedder=SentenceTransformerEmbedder(load_config().embeddings),
     )
 
 
@@ -249,18 +299,106 @@ def _cmd_approve(args: argparse.Namespace) -> int:
     added = _read_json(args.add) if args.add else []
     with _open_store(args) as store:
         orchestrator = _orchestrator(args, store)
+        run = store.get(args.run_id)
+        pain_point_edit = args.rename or args.merge or args.drop or args.rank
+        if (args.remove or added or pain_point_edit) and edited is not None:
+            raise ProductFoundryError("use --edit alone, or the checkpoint options alone")
         if args.remove or added:
-            if edited is not None:
-                raise ProductFoundryError("use --edit alone, or --remove and --add")
             if not isinstance(added, list):
                 raise ProductFoundryError(f"{args.add} must hold a JSON list of competitors")
-            stage = store.get(args.run_id).stage("s1_competitors")
+            stage = run.stage("s1_competitors")
             if stage.status != "awaiting_approval":
                 raise ProductFoundryError("--remove and --add apply to the competitor checkpoint")
             edited = edit_competitors(stage.output, remove=args.remove, add=added)
+        if pain_point_edit:
+            stage = run.stage("s3_pain_points")
+            if stage.status != "awaiting_approval":
+                raise ProductFoundryError(
+                    "--rename, --merge, --drop and --rank apply to the pain-point checkpoint"
+                )
+            edited = edit_pain_points(
+                stage.output,
+                rename=dict(_label(item) for item in args.rename),
+                merge=[item.split(",") for item in args.merge],
+                drop=args.drop,
+                rank=args.rank.split(",") if args.rank else (),
+            )
+        if edited is not None and run.stage("s3_pain_points").status == "awaiting_approval":
+            _check_pain_point_edit(args, run, edited)
         orchestrator.approve(args.run_id, edited)
         run = orchestrator.resume(args.run_id)
     _print_run(run)
+    return 0
+
+
+def _label(item: str) -> tuple[str, str]:
+    name, separator, label = item.partition("=")
+    if not separator or not label.strip():
+        raise ProductFoundryError(f"--rename takes N=LABEL, not {item!r}")
+    return name, label.strip()
+
+
+def _check_pain_point_edit(args: argparse.Namespace, run: RunRecord, edited: object) -> None:
+    """An edited report must still match the stored clusters and reviews."""
+    if args.fake_stages:
+        return  # stand-in output cites reviews that do not exist
+    if args.sessions is None:
+        raise ProductFoundryError(
+            "an edited pain-point report is checked against the stored reviews, "
+            "which --memory does not keep; approve it unchanged or use the database"
+        )
+    from productfoundry.core.competitors import CompetitorList
+    from productfoundry.core.pain_points import PainPointReport
+    from productfoundry.stages.s3_pain_points import run_reviews
+    from productfoundry.stages.s3_pain_points.validation import check_report
+
+    try:
+        report = PainPointReport.model_validate(edited)
+    except ValidationError:
+        return  # approval reports schema errors
+    reviews, clusters = _evidence_stores(args)
+    competitors = CompetitorList.model_validate(run.stage("s1_competitors").effective_output)
+    _, stored = run_reviews(competitors, reviews)
+    check_report(report, clusters.for_run(run.id), stored, ranked_by_score=False)
+
+
+def _cmd_report(args: argparse.Namespace) -> int:
+    with _open_store(args) as store:
+        run = store.get(args.run_id)
+        output = run.stage("s3_pain_points").effective_output
+        if output is None:
+            raise ProductFoundryError(f"run {run.id} has no pain-point report yet")
+        if args.sessions is None:
+            raise ProductFoundryError(
+                "the report quotes stored reviews, which --memory does not keep"
+            )
+        from productfoundry.core.competitors import CompetitorList
+        from productfoundry.core.pain_points import PainPointReport
+        from productfoundry.stages.s3_pain_points import run_reviews
+        from productfoundry.stages.s3_pain_points.export import export_report, render_markdown
+
+        competitors = CompetitorList.model_validate(run.stage("s1_competitors").effective_output)
+        names, reviews = run_reviews(competitors, _evidence_stores(args)[0])
+        incumbent = run.input.incumbent
+        export = export_report(
+            PainPointReport.model_validate(output),
+            reviews,
+            names,
+            title=incumbent.name if incumbent else run.input.idea,
+        )
+    if args.format == "json":
+        text = json.dumps(export, indent=2, ensure_ascii=False) + "\n"
+    else:
+        text = render_markdown(export)
+    if args.out is None:
+        print(text, end="")
+    else:
+        try:
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(text, encoding="utf-8")
+        except OSError as exc:
+            raise ProductFoundryError(f"cannot write {args.out}: {exc.strerror}") from exc
+        print(args.out)
     return 0
 
 
@@ -353,6 +491,10 @@ def _print_run(run: RunRecord) -> None:
     competitors = run.stage("s1_competitors")
     if competitors.status == "awaiting_approval":
         _print_competitors(competitors.output)
+    pain_points = run.stage("s3_pain_points")
+    if pain_points.status == "awaiting_approval":
+        _print_pain_points(pain_points.output)
+        print(f"quotes  productfoundry report {run.id}")
     if run.status == "awaiting_approval":
         print(f"next    productfoundry approve {run.id}")
 
@@ -369,6 +511,23 @@ def _print_competitors(output: dict) -> None:
         print("rejected")
     for rejected in output["rejected"]:
         print(f"  - {rejected['name']}: {rejected['reason']}")
+
+
+def _print_pain_points(output: dict) -> None:
+    print("pain points")
+    for point in output["pain_points"]:
+        print(
+            f"  {point['rank']}. {point['label']}  severity {point['severity']}/5, "
+            f"{point['review_count']} reviews, {point['negative_share']:.0%} negative, "
+            f"score {point['score']:g}  [{point['cluster_id']}]"
+        )
+        print(f"     {point['description']}")
+    if not output["pain_points"]:
+        print("  none: not enough negative reviews to form a theme")
+    if output["junk_clusters"]:
+        print("not pain points")
+    for junk in output["junk_clusters"]:
+        print(f"  - {junk['cluster_id']} ({junk['review_count']} reviews): {junk['reason']}")
 
 
 if __name__ == "__main__":

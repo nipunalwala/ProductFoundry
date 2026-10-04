@@ -30,7 +30,7 @@ file instead, with no database needed.
 
 ## Use
 
-From `backend/`. Stages are stand-ins until their phases are built.
+From `backend/`. Stages 1 to 3 are real; later stages arrive with their phases.
 
 ```
 py -m uv run productfoundry run --input input.json   # stops at the first checkpoint
@@ -47,8 +47,16 @@ LLM providers and their pinned models are set in
 search.
 
 At the competitor checkpoint, `approve` also takes `--remove NAME` and
-`--add competitors.json`. `--fake-stages` runs every stage as a stand-in, with
-no outside request.
+`--add competitors.json`. At the pain-point checkpoint it takes
+`--rename N=LABEL`, `--merge N,M`, `--drop N` and `--rank N,M`, where N is the
+pain point's rank or cluster id. `--fake-stages` runs every stage as a
+stand-in, with no outside request.
+
+```
+py -m uv run productfoundry report RUN_ID [--format md|json] [--out FILE]
+```
+
+exports the pain-point report with its quotes, each linked to its source.
 
 ## Test
 

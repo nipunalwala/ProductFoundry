@@ -121,7 +121,7 @@ def test_status_with_no_runs(cli):
 def test_schema_lists_prints_and_writes_json_schema(cli, tmp_path):
     code, out, _ = cli("schema")
     assert code == 0 and out.split() == [
-        "RunInput", "v1", "CompetitorList", "v1", "ReviewSet", "v1", "PainPointReport", "v1",
+        "RunInput", "v1", "CompetitorList", "v1", "ReviewSet", "v1", "PainPointReport", "v2",
     ]  # fmt: skip
 
     code, out, _ = cli("schema", "RunInput")
@@ -131,9 +131,9 @@ def test_schema_lists_prints_and_writes_json_schema(cli, tmp_path):
     code, _, _ = cli("schema", "--out", str(out_dir))
     assert code == 0
     assert sorted(p.name for p in out_dir.iterdir()) == sorted(
-        f"{name}.v1.schema.json" for name in SCHEMAS
+        f"{name}.v{2 if name == 'PainPointReport' else 1}.schema.json" for name in SCHEMAS
     )
-    assert json.loads((out_dir / "PainPointReport.v1.schema.json").read_text(encoding="utf-8"))
+    assert json.loads((out_dir / "PainPointReport.v2.schema.json").read_text(encoding="utf-8"))
 
 
 def test_the_competitor_checkpoint_prints_the_list_and_takes_remove_and_add(

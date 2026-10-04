@@ -331,7 +331,10 @@ def test_the_stage_interface_gives_no_access_to_run_state():
     parameters = list(inspect.signature(Stage.__call__).parameters)
     assert parameters == ["self", "run_input", "earlier_outputs", "services"]
     fields = set(Services.__dataclass_fields__)
-    assert fields == {"seed", "llm", "search", "app_lookups", "review_sources", "reviews"}
+    assert fields == {
+        "run_id", "seed", "llm", "search", "app_lookups", "review_sources", "reviews",
+        "clusters", "embedder",
+    }  # fmt: skip
 
 
 def test_a_stage_that_tampers_with_its_inputs_does_not_change_run_state(run_input):

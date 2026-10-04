@@ -5,7 +5,13 @@ from collections.abc import Mapping
 from pydantic import BaseModel
 
 from productfoundry.core.competitors import Competitor, CompetitorList
-from productfoundry.core.pain_points import LanguageCounts, PainPoint, PainPointReport
+from productfoundry.core.pain_points import (
+    RANKING_FORMULA,
+    LanguageCounts,
+    PainPoint,
+    PainPointReport,
+    pain_point_score,
+)
 from productfoundry.core.reviews import ProductReviewCounts, ReviewSet
 from productfoundry.core.run_input import RunInput, StoreIds
 from productfoundry.orchestrator.protocols import Services, Stage
@@ -81,13 +87,15 @@ def fake_pain_points(
                 negative_share=0.8,
                 product_ids=[product.product_id for product in reviews.products],
                 quote_review_ids=["rev_fake0", "rev_fake1", "rev_fake2"],
-                score=4.0,
+                score=pain_point_score(4 * products, 0.8, 5),
             )
         ],
-        ranking_formula="score = severity * negative_share",
+        ranking_formula=RANKING_FORMULA,
         language_counts=LanguageCounts(
             english=6 * products, hinglish=3 * products, not_analysed=products
         ),
+        clustered_reviews=5 * products,
+        noise_reviews=products,
     )
 
 

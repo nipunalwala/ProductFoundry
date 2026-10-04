@@ -61,6 +61,8 @@ def report(**overrides) -> dict:
         "pain_points": [pain_point()],
         "ranking_formula": "score = severity * negative_share",
         "language_counts": {"english": 5, "hinglish": 3, "not_analysed": 2},
+        "clustered_reviews": 20,
+        "noise_reviews": 2,
     }
     data.update(overrides)
     return data
@@ -235,6 +237,9 @@ def test_pain_point_report_may_be_empty():
         ({"negative_share": 1.2}, "less than or equal to 1"),
         ({"product_ids": []}, "at least 1"),
         ({"rank": 2}, "ordered by rank"),
+        ({"merged_cluster_ids": ["cl_a"]}, "must not repeat or include cluster_id"),
+        ({"quote_glosses": {"rev_9": "It failed."}}, "may only translate reviews"),
+        ({"review_count": 19}, "more reviews than were clustered"),
     ],
 )
 def test_pain_point_rejects(overrides, message):
@@ -246,6 +251,17 @@ def test_a_cluster_is_a_pain_point_or_junk_not_both():
     junk = [{"cluster_id": "cl_a", "review_count": 4, "reason": "Spam."}]
     with pytest.raises(ValidationError, match="appears once"):
         PainPointReport.model_validate(report(junk_clusters=junk))
+    merged = [pain_point(merged_cluster_ids=["cl_b"])]
+    junk = [{"cluster_id": "cl_b", "review_count": 4, "reason": "Spam."}]
+    with pytest.raises(ValidationError, match="appears once"):
+        PainPointReport.model_validate(report(pain_points=merged, junk_clusters=junk))
+
+
+def test_a_merged_pain_point_names_its_clusters_and_glosses_its_hinglish_quotes():
+    point = pain_point(merged_cluster_ids=["cl_b"], quote_glosses={"rev_2": "It is very slow."})
+    parsed = PainPointReport.model_validate(report(pain_points=[point])).pain_points[0]
+    assert parsed.cluster_ids == ["cl_a", "cl_b"]
+    assert parsed.quote_glosses == {"rev_2": "It is very slow."}
 
 
 # Shared
@@ -254,9 +270,10 @@ def test_a_cluster_is_a_pain_point_or_junk_not_both():
 @pytest.mark.parametrize("name", sorted(SCHEMAS))
 def test_every_schema_is_versioned_and_exports_json_schema(name):
     model = SCHEMAS[name]
-    assert schema_version_of(model) == 1
+    version = 2 if name == "PainPointReport" else 1
+    assert schema_version_of(model) == version
     json_schema = model.model_json_schema()
-    assert json_schema["properties"]["schema_version"]["const"] == 1
+    assert json_schema["properties"]["schema_version"]["const"] == version
 
 
 def test_new_id_has_its_prefix_and_is_unique():

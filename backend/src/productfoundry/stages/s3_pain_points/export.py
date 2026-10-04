@@ -1,0 +1,132 @@
+"""The report with its quotes resolved to stored reviews, as JSON and as Markdown."""
+
+import re
+from collections.abc import Mapping
+from typing import Any
+
+from productfoundry.core.errors import StageOutputInvalid
+from productfoundry.core.pain_points import PainPointReport
+from productfoundry.core.reviews import Review
+
+QUOTE_CHARS = 280  # reviews are quoted briefly as evidence, never in bulk
+SOURCE_NAMES = {
+    "google_play": "Google Play",
+    "app_store": "App Store",
+    "reddit": "Reddit",
+    "product_hunt": "Product Hunt",
+}
+
+
+def shorten(text: str, limit: int = QUOTE_CHARS) -> str:
+    """The text, cut at a word boundary with an ellipsis when it is longer than `limit`."""
+    if len(text) <= limit:
+        return text
+    return text[:limit].rsplit(" ", 1)[0].rstrip(" ,.;:") + "…"
+
+
+def export_report(
+    report: PainPointReport,
+    reviews: Mapping[str, Review],
+    product_names: Mapping[str, str],
+    *,
+    title: str,
+) -> dict[str, Any]:
+    """The report as plain data, each quote with its text, source URL and date.
+
+    A quote that does not resolve to a stored review is an error, never a gap.
+    """
+    points = []
+    for point in report.pain_points:
+        quotes = []
+        for review_id in point.quote_review_ids:
+            review = reviews.get(review_id)
+            if review is None:
+                raise StageOutputInvalid(f"quoted review {review_id} is not stored")
+            quotes.append(
+                {
+                    "review_id": review.id,
+                    "text": shorten(review.text),
+                    "language": review.language,
+                    # A translation of the quote, written by the LLM. Not the review's text.
+                    "translation": point.quote_glosses.get(review.id),
+                    "product": product_names.get(review.product_id, review.product_id),
+                    "source": str(review.source),
+                    "url": review.url,
+                    "date": review.reviewed_at.date().isoformat(),
+                    "rating": review.rating,
+                }
+            )
+        points.append(
+            point.model_dump(mode="json", exclude={"quote_review_ids", "quote_glosses"})
+            | {
+                "products": [product_names.get(p, p) for p in point.product_ids],
+                "quotes": quotes,
+            }
+        )
+    return {
+        "title": title,
+        "schema_version": report.schema_version,
+        "ranking_formula": report.ranking_formula,
+        "language_counts": report.language_counts.model_dump(),
+        "clustered_reviews": report.clustered_reviews,
+        "noise_reviews": report.noise_reviews,
+        "pain_points": points,
+        "junk_clusters": [junk.model_dump() for junk in report.junk_clusters],
+    }
+
+
+def _plain(text: str) -> str:
+    """Review text as inert Markdown: nothing a reviewer typed becomes formatting or a link."""
+    return re.sub(r"([\\`*_\[\]<>#|])", r"\\\1", text)
+
+
+def render_markdown(export: Mapping[str, Any]) -> str:
+    """The Markdown view of `export_report`'s result."""
+    counts = export["language_counts"]
+    total = counts["english"] + counts["hinglish"] + counts["not_analysed"]
+    lines = [
+        f"# Pain-point report: {export['title']}",
+        "",
+        f"{total} reviews: {counts['english']} English, {counts['hinglish']} Hinglish, "
+        f"{counts['not_analysed']} not analysed (other languages are stored, not analysed).",
+        f"{export['clustered_reviews']} negative or mixed reviews were grouped into themes; "
+        f"{export['noise_reviews']} fitted no theme.",
+        "",
+        f"Ranking: {export['ranking_formula']}.",
+    ]
+    if not export["pain_points"]:
+        lines += ["", "No pain points: there were not enough negative reviews to form a theme."]
+    for point in export["pain_points"]:
+        merged = point["merged_cluster_ids"]
+        clusters = ", ".join(f"`{cluster_id}`" for cluster_id in [point["cluster_id"], *merged])
+        lines += [
+            "",
+            f"## {point['rank']}. {point['label']}",
+            "",
+            f"Severity {point['severity']}/5 · {point['review_count']} reviews · "
+            f"{point['negative_share']:.0%} negative · score {point['score']:g}",
+            "",
+            point["description"],
+            "",
+            f"- Why this severity: {point['severity_reason']}",
+            f"- Products: {', '.join(point['products'])}",
+            f"- Cluster: {clusters}" + (" (merged at the checkpoint)" if merged else ""),
+            "",
+            "Quotes:",
+        ]
+        for quote in point["quotes"]:
+            where = f"{SOURCE_NAMES.get(quote['source'], quote['source'])}, {quote['date']}"
+            if quote["url"]:
+                where = f"[{where}]({quote['url']})"
+            stars = f", {quote['rating']}/5 stars" if quote["rating"] else ""
+            lines += ["", f"> {_plain(quote['text'])}"]
+            if quote["translation"]:
+                lines += [">", f"> *Translation: {_plain(quote['translation'])}*"]
+            lines += [">", f"> {quote['product']}, {where}{stars} · `{quote['review_id']}`"]
+    if export["junk_clusters"]:
+        lines += ["", "## Groups that are not a pain point", ""]
+        lines += [
+            f"- `{junk['cluster_id']}` ({junk['review_count']} reviews): {junk['reason']}"
+            for junk in export["junk_clusters"]
+        ]
+    return "\n".join(lines) + "\n"

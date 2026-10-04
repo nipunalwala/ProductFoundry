@@ -1,0 +1,31 @@
+{
+  "_note": "Written by hand: the answers a careful reader would give for the three invented themes of test_s3_pain_points.py. The test fills in `quotes` and `glosses`, which depend on the sample that was sent.",
+  "answers": {
+    "payment": {
+      "junk": false,
+      "label": "Payments fail after money is debited",
+      "description": "A payment shows as failed although the money has left the user's bank account.",
+      "severity": 5,
+      "severity_reason": "Users lose money and cannot settle up, which is the product's main task."
+    },
+    "login": {
+      "junk": false,
+      "label": "Login code never arrives",
+      "description": "Users cannot log in because the verification code is not delivered.",
+      "severity": 4,
+      "severity_reason": "A user who cannot log in cannot use the product, but nothing is lost."
+    },
+    "ads": {
+      "junk": false,
+      "label": "Too many full-screen ads",
+      "description": "Full-screen ads interrupt users after almost every tap.",
+      "severity": 2,
+      "severity_reason": "The product still works; the ads are an annoyance."
+    }
+  },
+  "junk": {
+    "junk": true,
+    "junk_reason": "The reviews share no single complaint."
+  },
+  "gloss": "The same problem happened again."
+}
