@@ -4,7 +4,7 @@ from dataclasses import asdict
 from datetime import date
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import Integer, func, select
 from sqlalchemy.dialects.postgresql import insert
 
 from productfoundry.llm.types import LlmCall
@@ -35,6 +35,21 @@ class PostgresCallStore:
         )
         with self._sessions() as session:
             return session.scalar(statement)
+
+    def run_totals(self, run_id: str) -> dict[str, int]:
+        """What a run cost: provider attempts, answers, cache hits and tokens."""
+        live = ~LlmCallRow.cache_hit
+        statement = select(
+            func.coalesce(func.sum(live.cast(Integer)), 0),
+            func.coalesce(func.sum((live & (LlmCallRow.outcome == "ok")).cast(Integer)), 0),
+            func.coalesce(func.sum(LlmCallRow.cache_hit.cast(Integer)), 0),
+            func.coalesce(func.sum(LlmCallRow.input_tokens), 0),
+            func.coalesce(func.sum(LlmCallRow.output_tokens), 0),
+        ).where(LlmCallRow.run_id == run_id)
+        with self._sessions() as session:
+            row = session.execute(statement).one()
+        names = ("attempts", "answered", "cache_hits", "input_tokens", "output_tokens")
+        return dict(zip(names, (int(value) for value in row), strict=True))
 
 
 class PostgresUsageStore:

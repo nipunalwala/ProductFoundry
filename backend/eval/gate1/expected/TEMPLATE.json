@@ -1,0 +1,19 @@
+{
+  "product": "Product name",
+  "run_input": {
+    "mode": "alternative",
+    "idea": "What you would build instead, in one sentence",
+    "target_users": "Who it is for",
+    "platforms": ["android", "ios"],
+    "region": "IN",
+    "incumbent": {
+      "name": "Product name",
+      "urls": ["https://product.example"],
+      "store_ids": {"google_play": "com.example.app", "app_store": "123456789"}
+    }
+  },
+  "expected": [
+    "A pain point you already know is real, in one short sentence",
+    "Another one (5 to 10 in total)"
+  ]
+}
