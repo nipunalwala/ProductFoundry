@@ -148,6 +148,22 @@ def build_parser() -> argparse.ArgumentParser:
     llm.add_argument("action", choices=["check"], help="check: one small live call per provider")
     llm.set_defaults(handler=_cmd_llm)
 
+    pricing = commands.add_parser("pricing", help="read and show public pricing pages")
+    actions = pricing.add_subparsers(dest="action", required=True)
+    snapshot = actions.add_parser("snapshot", help="read one pricing page and store its plans")
+    snapshot.add_argument("--url", required=True, help="the public pricing page")
+    show = actions.add_parser("show", help="print the stored snapshots of a product")
+    show.add_argument("--history", action="store_true", help="every snapshot, not only the latest")
+    for action in (snapshot, show):
+        action.add_argument("--product", required=True, metavar="NAME")
+        action.add_argument(
+            "--run",
+            metavar="RUN_ID",
+            help="take the product's id from this run's competitor list, so that the "
+            "snapshot joins the run's reviews",
+        )
+    pricing.set_defaults(handler=_cmd_pricing)
+
     schema = commands.add_parser("schema", help="export the JSON Schema of the contracts")
     schema.add_argument("name", nargs="?", choices=sorted(SCHEMAS), help="print one schema")
     schema.add_argument("--out", type=Path, help="write every schema to this directory")
@@ -396,6 +412,45 @@ def _cmd_llm(args: argparse.Namespace) -> int:
         if engine is not None:
             engine.dispose()
     return 1 if failed else 0
+
+
+def _pricing_product(args: argparse.Namespace, store: RunStore) -> tuple[str, str]:
+    """The product's id and name: the run's competitor of that name, or an id from the name."""
+    from productfoundry.core.ids import product_id
+    from productfoundry.core.names import normalise_name, same_product
+
+    if args.run is None:
+        return product_id(normalise_name(args.product)), args.product
+    output = runtime.stage_output(store.get(args.run), "s1_competitors", "competitor list")
+    for competitor in output["competitors"]:
+        if same_product(competitor["name"], args.product):
+            return competitor["id"], competitor["name"]
+    raise ProductFoundryError(f"run {args.run} has no competitor named {args.product!r}")
+
+
+def _cmd_pricing(args: argparse.Namespace) -> int:
+    from productfoundry.market.pricing import render_snapshot
+
+    if args.memory:
+        raise ProductFoundryError("pricing snapshots are kept in the database, not with --memory")
+    with _open_store(args) as store:
+        from productfoundry import storage
+
+        product, name = _pricing_product(args, store)
+        if args.action == "snapshot":
+            outcome = runtime.pricing_snapshot(args.sessions, product, name, args.url)
+            if outcome.snapshot is None:
+                print(f"skipped: {outcome.skipped}")
+                return 1
+            print(render_snapshot(outcome.snapshot, name))
+            return 0
+        snapshots = storage.PricingRepository(args.sessions).history(product)
+        if not snapshots:
+            print(f"no pricing snapshot is stored for {name}")
+            return 1
+        for snapshot in snapshots if args.history else snapshots[-1:]:
+            print(render_snapshot(snapshot, name))
+    return 0
 
 
 def _cmd_schema(args: argparse.Namespace) -> int:

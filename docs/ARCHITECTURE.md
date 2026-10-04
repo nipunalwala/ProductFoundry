@@ -73,6 +73,8 @@ backend/
     stages/          one module per stage: s1_competitors ... s8_tracking
     llm/             gateway, routing table, quota, cache, provenance
     ml/              embeddings, clustering, trends
+    market/          market intelligence outside the staged pipeline: pricing
+                     snapshots (later changelogs, traction, the panel)
     sources/         one package per adapter: google_play, app_store, reddit,
                      product_hunt, search, pricing, trends, changelog
     storage/         SQLAlchemy models, repositories, Alembic migrations
@@ -205,7 +207,7 @@ name a *task*, never a provider or model.
 | Task group | Volume | Primary | Fallback 1 | Fallback 2 |
 |---|---|---|---|---|
 | Review sentiment, switching intent, changelog matching | High | Groq | Gemini Flash | OpenRouter free model |
-| Cluster labelling, competitor filtering, acceptance criteria | Medium | Gemini Flash | Groq | OpenRouter free model |
+| Cluster labelling, competitor filtering, acceptance criteria, pricing extraction | Medium | Gemini Flash | Groq | OpenRouter free model |
 | PRD, task breakdown, pricing recommendation | Low, quality-critical | Gemini Flash | OpenRouter free model | Groq |
 
 - **Failure** = HTTP 429, timeout, server error, or output that fails the
@@ -284,6 +286,18 @@ reviews and fetches only newer ones.
 | Pricing | Fetch public pricing pages, parse plans, prices, limits and tiers; weekly snapshot; flag changes; INR and USD separately | High | Table plus change history |
 | Traction | Combine Google Trends, download ranges, review-count growth, job postings and community mentions | Medium | growing / flat / declining |
 | Revenue | Public filings, self-reported figures, marketplace listings; otherwise customers x average plan price | Low | A range, a confidence label and its basis; tagged experimental |
+
+Pricing snapshots (built): `market/pricing.py` checks robots.txt, reads the
+page's visible text with a headless browser (`sources/pricing`), and asks the
+gateway for the plans (`PricingSnapshot`: per plan its name, prices with
+currency, period, per-seat and billed-annually flags, limits and features; free
+tier and trial). Every amount, currency, plan name and trial length must be
+written in the page text that was sent: an answer with a figure the page does
+not show fails validation, so the gateway retries and falls back, and nothing is
+stored. Amounts are never calculated (no monthly price times 12). A page that
+robots.txt disallows, that cannot be read, or that shows no plan is skipped and
+reported. A snapshot stores the page text's hash and the fetch time, not the
+text.
 
 Features built on top:
 

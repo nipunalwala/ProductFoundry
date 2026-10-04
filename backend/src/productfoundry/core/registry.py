@@ -6,6 +6,7 @@ from productfoundry.core.acceptance import AcceptanceCriteria
 from productfoundry.core.competitors import CompetitorList
 from productfoundry.core.pain_points import PainPointReport
 from productfoundry.core.prd import Prd
+from productfoundry.core.pricing import PricingSnapshot
 from productfoundry.core.reviews import ReviewSet
 from productfoundry.core.roadmap import Roadmap
 from productfoundry.core.run_input import RunInput
@@ -22,5 +23,6 @@ SCHEMAS: dict[str, type[BaseModel]] = {
         TaskPlan,
         Roadmap,
         AcceptanceCriteria,
+        PricingSnapshot,
     )
 }

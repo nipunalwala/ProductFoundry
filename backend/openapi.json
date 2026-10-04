@@ -65,6 +65,15 @@
         "title": "Approve",
         "type": "object"
       },
+      "BillingPeriod": {
+        "enum": [
+          "month",
+          "year",
+          "one_time"
+        ],
+        "title": "BillingPeriod",
+        "type": "string"
+      },
       "Competitor": {
         "additionalProperties": false,
         "properties": {
@@ -659,6 +668,57 @@
         "title": "PainPointReport",
         "type": "object"
       },
+      "Plan": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_sales": {
+            "default": false,
+            "title": "Contact Sales",
+            "type": "boolean"
+          },
+          "features": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "is_free": {
+            "default": false,
+            "title": "Is Free",
+            "type": "boolean"
+          },
+          "limits": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Limits",
+            "type": "array"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "prices": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Price"
+            },
+            "title": "Prices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Plan",
+        "type": "object"
+      },
       "Platform": {
         "enum": [
           "android",
@@ -739,6 +799,120 @@
           "success_metrics"
         ],
         "title": "Prd",
+        "type": "object"
+      },
+      "Price": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "billed_annually": {
+            "default": false,
+            "title": "Billed Annually",
+            "type": "boolean"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "per_seat": {
+            "default": false,
+            "title": "Per Seat",
+            "type": "boolean"
+          },
+          "period": {
+            "$ref": "#/components/schemas/BillingPeriod"
+          }
+        },
+        "required": [
+          "amount",
+          "currency",
+          "period"
+        ],
+        "title": "Price",
+        "type": "object"
+      },
+      "PricingSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "fetched_at": {
+            "format": "date-time",
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "free_tier": {
+            "title": "Free Tier",
+            "type": "boolean"
+          },
+          "free_trial": {
+            "title": "Free Trial",
+            "type": "boolean"
+          },
+          "plans": {
+            "items": {
+              "$ref": "#/components/schemas/Plan"
+            },
+            "minItems": 1,
+            "title": "Plans",
+            "type": "array"
+          },
+          "product_id": {
+            "pattern": "^prod_[A-Za-z0-9]+$",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "text_hash": {
+            "minLength": 1,
+            "title": "Text Hash",
+            "type": "string"
+          },
+          "trial_days": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Trial Days"
+          },
+          "url": {
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "url",
+          "fetched_at",
+          "text_hash",
+          "plans",
+          "free_tier",
+          "free_trial"
+        ],
+        "title": "PricingSnapshot",
         "type": "object"
       },
       "Priority": {

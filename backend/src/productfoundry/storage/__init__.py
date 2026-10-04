@@ -10,6 +10,7 @@ from productfoundry.storage.db import (
     upgrade,
 )
 from productfoundry.storage.llm import PostgresCallStore, PostgresUsageStore
+from productfoundry.storage.pricing import PricingRepository
 from productfoundry.storage.reviews import ReviewRepository
 from productfoundry.storage.run_store import PostgresRunStore
 
@@ -18,6 +19,7 @@ __all__ = [
     "PostgresClusterStore",
     "PostgresUsageStore",
     "PostgresRunStore",
+    "PricingRepository",
     "ReviewRepository",
     "Sessions",
     "StorageUnavailable",

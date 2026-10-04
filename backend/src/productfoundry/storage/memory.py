@@ -5,6 +5,7 @@ from datetime import datetime
 
 from productfoundry.core.clusters import Cluster
 from productfoundry.core.competitors import Competitor
+from productfoundry.core.pricing import PricingSnapshot
 from productfoundry.core.reviews import ANALYSED_LANGUAGES, Review, ReviewSourceName, Sentiment
 
 
@@ -93,3 +94,21 @@ class InMemoryReviewStore:
                 self._reviews[key] = review.model_copy(
                     update={"language": language, "sentiment": sentiment}
                 )
+
+
+class InMemoryPricingStore:
+    def __init__(self) -> None:
+        self._snapshots: list[PricingSnapshot] = []
+        self.names: dict[str, str] = {}
+
+    def add(self, snapshot: PricingSnapshot, product_name: str) -> None:
+        self._snapshots.append(snapshot)
+        self.names.setdefault(snapshot.product_id, product_name)
+
+    def latest(self, product_id: str, url: str | None = None) -> PricingSnapshot | None:
+        found = [s for s in self.history(product_id) if url is None or s.url == url]
+        return found[-1] if found else None
+
+    def history(self, product_id: str) -> list[PricingSnapshot]:
+        found = [s for s in self._snapshots if s.product_id == product_id]
+        return sorted(found, key=lambda snapshot: snapshot.fetched_at)

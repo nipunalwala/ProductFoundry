@@ -81,6 +81,20 @@ with `leaving`, `switched_from`, `switched_to`, `considering` or `none`, then
 run `precision` to see how often the model's switching labels agree with yours.
 The file holds review text and is not committed. Neither command calls an LLM.
 
+### Pricing snapshots
+
+```
+py -m uv run productfoundry pricing snapshot --product NAME --url URL [--run RUN_ID]
+py -m uv run productfoundry pricing show --product NAME [--history]
+```
+
+`snapshot` reads one public pricing page (after checking its robots.txt), extracts
+the plans and stores them. A price that is not written on the page is rejected.
+`--run` files the snapshot under the product id that run uses, so it sits with
+the run's reviews. The page is read with a headless browser: set
+`PRICING_BROWSER_CHANNEL=msedge` (or `chrome`) in `.env` to use an installed
+one, or run `py -m uv run playwright install chromium` once.
+
 ## API and worker
 
 ```

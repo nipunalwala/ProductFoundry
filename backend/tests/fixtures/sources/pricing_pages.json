@@ -1,0 +1,98 @@
+{
+  "_note": "Hand-written. The products, pages and prices are invented; the three layouts are the ones phase 17 names. `answer` is what a correct extraction returns.",
+  "toggle": {
+    "product": "Tallyo",
+    "url": "https://tallyo.example/pricing",
+    "text": "Tallyo\nPricing\nSimple plans for shared expenses\n\nMonthly   Annual (save 20%)\n\nFree\n₹0\nFor occasional splits\nUp to 5 expenses per day\n1 group\nGet started\n\nPlus\n₹149 per month\nor ₹1,430 per year\nUnlimited expenses\nReceipt scanning\nUp to 10 groups\nStart 14-day free trial\n\nFamily\n₹249 per month\nor ₹2,390 per year\nEverything in Plus\nUp to 6 members\nShared budgets\nStart 14-day free trial\n\nPrices in USD: Plus $2.99 per month, Family $4.99 per month.\n\nFrequently asked questions\nCan I cancel any time? Yes.\n© 2026 Tallyo",
+    "answer": {
+      "plans": [
+        {
+          "name": "Free",
+          "is_free": true,
+          "limits": ["Up to 5 expenses per day", "1 group"],
+          "features": ["For occasional splits"]
+        },
+        {
+          "name": "Plus",
+          "prices": [
+            {"amount": "149", "currency": "INR", "period": "month"},
+            {"amount": "1430", "currency": "INR", "period": "year"},
+            {"amount": "2.99", "currency": "USD", "period": "month"}
+          ],
+          "limits": ["Up to 10 groups"],
+          "features": ["Unlimited expenses", "Receipt scanning"]
+        },
+        {
+          "name": "Family",
+          "prices": [
+            {"amount": "249", "currency": "INR", "period": "month"},
+            {"amount": "2390", "currency": "INR", "period": "year"},
+            {"amount": "4.99", "currency": "USD", "period": "month"}
+          ],
+          "limits": ["Up to 6 members"],
+          "features": ["Everything in Plus", "Shared budgets"]
+        }
+      ],
+      "free_trial": true,
+      "trial_days": 14
+    }
+  },
+  "per_seat": {
+    "product": "Deskline",
+    "url": "https://deskline.example/pricing",
+    "text": "Deskline pricing\n\nStarter\n$6\nper user / month, billed annually\n$8 billed monthly\nShared inbox\nUp to 3 mailboxes\n\nGrowth\n$15\nper user / month, billed annually\n$19 billed monthly\nAutomations\nReporting\nUp to 25 mailboxes\n\nAll plans include a 30-day money-back guarantee.\nTrusted by 4,000 teams",
+    "answer": {
+      "plans": [
+        {
+          "name": "Starter",
+          "prices": [
+            {"amount": "6", "currency": "USD", "period": "month", "per_seat": true, "billed_annually": true},
+            {"amount": "8", "currency": "USD", "period": "month", "per_seat": true}
+          ],
+          "limits": ["Up to 3 mailboxes"],
+          "features": ["Shared inbox"]
+        },
+        {
+          "name": "Growth",
+          "prices": [
+            {"amount": "15", "currency": "USD", "period": "month", "per_seat": true, "billed_annually": true},
+            {"amount": "19", "currency": "USD", "period": "month", "per_seat": true}
+          ],
+          "limits": ["Up to 25 mailboxes"],
+          "features": ["Automations", "Reporting"]
+        }
+      ],
+      "free_trial": false,
+      "trial_days": null
+    }
+  },
+  "contact": {
+    "product": "Ledgerly",
+    "url": "https://ledgerly.example/plans",
+    "text": "Plans\n\nTeam\nRs. 4,999 / month\nUp to 20 users\nInvoicing\nGST reports\nBuy now\n\nBusiness\nRs. 1,49,999 / year\nUp to 200 users\nEverything in Team\nAudit log\nBuy now\n\nEnterprise\nCustom pricing\nUnlimited users\nDedicated support\nSingle sign-on\nContact sales\n\nAll prices exclude 18% GST.",
+    "answer": {
+      "plans": [
+        {
+          "name": "Team",
+          "prices": [{"amount": "4999", "currency": "INR", "period": "month"}],
+          "limits": ["Up to 20 users"],
+          "features": ["Invoicing", "GST reports"]
+        },
+        {
+          "name": "Business",
+          "prices": [{"amount": "149999", "currency": "INR", "period": "year"}],
+          "limits": ["Up to 200 users"],
+          "features": ["Everything in Team", "Audit log"]
+        },
+        {
+          "name": "Enterprise",
+          "contact_sales": true,
+          "limits": ["Unlimited users"],
+          "features": ["Dedicated support", "Single sign-on"]
+        }
+      ],
+      "free_trial": false,
+      "trial_days": null
+    }
+  }
+}

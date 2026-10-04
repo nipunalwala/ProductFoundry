@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # Reviews the worker fetches per product per store in one run.
     review_cap: int = 2000
 
+    # The browser that reads pricing pages: an installed one ("msedge", "chrome"), or
+    # Playwright's own Chromium when unset (`playwright install chromium`).
+    pricing_browser_channel: str | None = None
+
     def sqlalchemy_url(self) -> URL:
         if self.database_url:
             return make_url(self.database_url)

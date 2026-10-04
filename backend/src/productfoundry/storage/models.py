@@ -151,3 +151,17 @@ class ProviderUsageRow(Base):
     day: Mapped[date] = mapped_column(Date, primary_key=True)
     requests: Mapped[int] = mapped_column(server_default=text("0"))
     tokens: Mapped[int] = mapped_column(BigInteger, server_default=text("0"))
+
+
+class PricingSnapshotRow(Base):
+    """A product's pricing page as read at one moment. Rows are never updated."""
+
+    __tablename__ = "pricing_snapshots"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"), index=True)
+    url: Mapped[str]
+    fetched_at: Mapped[datetime] = mapped_column(index=True)
+    text_hash: Mapped[str]  # sha256 of the page text: an unchanged page needs no new extraction
+    schema_version: Mapped[int] = mapped_column(SmallInteger)
+    snapshot: Mapped[dict[str, Any]]

@@ -33,9 +33,21 @@ def evidence_stores(sessions) -> tuple[ReviewStore, ClusterStore]:
     return InMemoryReviewStore(), InMemoryClusterStore()
 
 
-def services(sessions) -> Services:
+def live_gateway(sessions, settings):
+    """The LLM gateway over the real providers. Calls are recorded in the database if any."""
     from productfoundry import llm, storage
     from productfoundry.llm.fakes import InMemoryCallStore, InMemoryUsageStore
+
+    routing = llm.load_routing()
+    if sessions is not None:
+        calls = storage.PostgresCallStore(sessions)
+        usage = storage.PostgresUsageStore(sessions)
+    else:
+        calls, usage = InMemoryCallStore(), InMemoryUsageStore()
+    return llm.Gateway(routing, llm.live_providers(routing, settings), calls, usage)
+
+
+def services(sessions) -> Services:
     from productfoundry.ml.config import load_config
     from productfoundry.ml.embeddings import SentenceTransformerEmbedder
     from productfoundry.settings import Settings
@@ -47,14 +59,8 @@ def services(sessions) -> Services:
     from productfoundry.sources.search.tavily import TavilySearch
 
     settings = Settings()
-    routing = llm.load_routing()
     reviews, clusters = evidence_stores(sessions)
-    if sessions is not None:
-        calls = storage.PostgresCallStore(sessions)
-        usage = storage.PostgresUsageStore(sessions)
-    else:
-        calls, usage = InMemoryCallStore(), InMemoryUsageStore()
-    gateway = llm.Gateway(routing, llm.live_providers(routing, settings), calls, usage)
+    gateway = live_gateway(sessions, settings)
 
     search = None
     lookups = {"app_store": AppStoreLookup()}
@@ -243,3 +249,26 @@ def _tasks(run: RunRecord, reviews: ReviewStore | None):
 
 
 _BUILDERS: dict[str, Callable] = {"report": _report, "prd": _prd, "tasks": _tasks}
+
+
+# Market intelligence
+
+
+def pricing_snapshot(sessions, product_id: str, product_name: str, url: str):
+    """Read one public pricing page and store what it says. Needs the database."""
+    from productfoundry import storage
+    from productfoundry.market.pricing import snapshot_pricing
+    from productfoundry.settings import Settings
+    from productfoundry.sources.pricing import PlaywrightFetcher
+    from productfoundry.sources.robots import Robots
+
+    settings = Settings()
+    return snapshot_pricing(
+        product_id,
+        product_name,
+        url,
+        fetcher=PlaywrightFetcher(settings.pricing_browser_channel),
+        robots=Robots(),
+        llm=live_gateway(sessions, settings),
+        store=storage.PricingRepository(sessions),
+    )

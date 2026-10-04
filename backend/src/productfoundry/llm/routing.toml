@@ -38,7 +38,7 @@ tasks = ["review_sentiment", "switching_intent", "changelog_matching"]
 chain = ["groq", "gemini", "openrouter"]
 
 [groups.medium]
-tasks = ["cluster_labelling", "competitor_filtering", "acceptance_criteria"]
+tasks = ["cluster_labelling", "competitor_filtering", "acceptance_criteria", "pricing_extraction"]
 chain = ["gemini", "groq", "openrouter"]
 
 [groups.quality]
