@@ -334,7 +334,7 @@ def test_the_stage_interface_gives_no_access_to_run_state():
     fields = set(Services.__dataclass_fields__)
     assert fields == {
         "run_id", "seed", "llm", "search", "app_lookups", "review_sources", "reviews",
-        "clusters", "embedder",
+        "clusters", "embedder", "pricing", "pricing_alerts", "traction", "changelog",
     }  # fmt: skip
 
 

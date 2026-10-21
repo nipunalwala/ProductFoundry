@@ -146,6 +146,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runs/{run_id}/market": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Market Panel
+         * @description The market opportunity panel: pricing, traction, switching, changelog, gaps, and signals.
+         *
+         *     Returns partial data when some market intelligence has not been collected yet.
+         *     Makes no external requests or LLM calls.
+         */
+        get: operations["get_market_panel_runs__run_id__market_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runs/{run_id}/resume": {
         parameters: {
             query?: never;
@@ -215,6 +238,12 @@ export interface components {
             } | null;
             pain_points?: components["schemas"]["PainPointEdits"] | null;
         };
+        /**
+         * Availability
+         * @description Why a section has no data.
+         * @enum {string}
+         */
+        Availability: "not_collected" | "no_history" | "insufficient_data" | "skipped";
         /**
          * BillingPeriod
          * @enum {string}
@@ -287,21 +316,104 @@ export interface components {
             id: string;
             /** Product Id */
             product_id: string;
-            /** Released At */
-            released_at?: string | null;
+            /**
+             * Released At
+             * @default null
+             */
+            released_at: string | null;
             source: components["schemas"]["ChangelogSourceKind"];
             /** Title */
             title: string;
-            /** Url */
-            url?: string | null;
-            /** Version */
-            version?: string | null;
+            /**
+             * Url
+             * @default null
+             */
+            url: string | null;
+            /**
+             * Version
+             * @default null
+             */
+            version: string | null;
+        };
+        /**
+         * ChangelogSection
+         * @description Changelog alerts for the run's products.
+         */
+        ChangelogSection: {
+            /**
+             * Alerts
+             * @default []
+             */
+            alerts: components["schemas"]["ChangelogAlert"][];
+            /** @default null */
+            availability: components["schemas"]["Availability"] | null;
+            /**
+             * Items Matched
+             * @default 0
+             */
+            items_matched: number;
         };
         /**
          * ChangelogSourceKind
          * @enum {string}
          */
         ChangelogSourceKind: "github" | "feed" | "page" | "app_store" | "google_play";
+        /**
+         * CombinedSignal
+         * @description A price increase followed by a rise in the pricing complaint's share.
+         *
+         *     This is an association, not a claim of causation. Both pieces of evidence
+         *     are cited so the user can judge.
+         */
+        CombinedSignal: {
+            alert: components["schemas"]["PricingAlert"];
+            change: components["schemas"]["PricingAlert"];
+            /** Cluster Id */
+            cluster_id: string;
+            /**
+             * Complaint Evidence Ids
+             * @default []
+             */
+            complaint_evidence_ids: string[];
+            /** @default low */
+            confidence: components["schemas"]["Confidence"];
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Pain Point Label */
+            pain_point_label: string;
+            /**
+             * Price Increase Date
+             * Format: date-time
+             */
+            price_increase_date: string;
+            /**
+             * Pricing Evidence Ids
+             * @default []
+             */
+            pricing_evidence_ids: string[];
+            /** Product Id */
+            product_id: string;
+            /** Product Name */
+            product_name: string;
+            /**
+             * Share After
+             * @default null
+             */
+            share_after: number | null;
+            /**
+             * Share Before
+             * @default null
+             */
+            share_before: number | null;
+            /**
+             * Share Change
+             * @default null
+             */
+            share_change: number | null;
+        };
         /** Competitor */
         Competitor: {
             /** Id */
@@ -360,6 +472,11 @@ export interface components {
              */
             schema_version: 1;
         };
+        /**
+         * Confidence
+         * @enum {string}
+         */
+        Confidence: "high" | "medium" | "low" | "none";
         /** CreateRun */
         CreateRun: {
             input: components["schemas"]["RunInput"];
@@ -384,6 +501,29 @@ export interface components {
          * @enum {string}
          */
         CriterionKind: "happy_path" | "edge_case" | "failure_state";
+        /**
+         * DifferentiationOpportunity
+         * @description Where the incumbent is weak, backed by evidence.
+         *
+         *     Only produced in mode 2 (alternative to an existing product).
+         */
+        DifferentiationOpportunity: {
+            /** Area */
+            area: string;
+            /** @default medium */
+            confidence: components["schemas"]["Confidence"];
+            /** Description */
+            description: string;
+            /**
+             * Evidence Ids
+             * @default []
+             */
+            evidence_ids: string[];
+            /** Incumbent Id */
+            incumbent_id: string;
+            /** Incumbent Name */
+            incumbent_name: string;
+        };
         /**
          * Direction
          * @enum {string}
@@ -411,14 +551,23 @@ export interface components {
          * @description A pain point's share of all reviews before and after a release.
          */
         FollowUp: {
-            /** Change */
-            change?: number | null;
+            /**
+             * Change
+             * @default null
+             */
+            change: number | null;
             /** Months */
             months: number;
-            /** Share After */
-            share_after?: number | null;
-            /** Share Before */
-            share_before?: number | null;
+            /**
+             * Share After
+             * @default null
+             */
+            share_after: number | null;
+            /**
+             * Share Before
+             * @default null
+             */
+            share_before: number | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -485,6 +634,114 @@ export interface components {
             product_id: string;
             /** Product Name */
             product_name: string;
+        };
+        /**
+         * MarketGapWithEvidence
+         * @description A market gap with its underlying evidence references.
+         *
+         *     Extends the basic MarketGap with resolvable evidence IDs so the PRD
+         *     and gate 2 can validate the grounding.
+         */
+        MarketGapWithEvidence: {
+            /** @default medium */
+            confidence: components["schemas"]["Confidence"];
+            /**
+             * Evidence Ids
+             * @default []
+             */
+            evidence_ids: string[];
+            /** Fact */
+            fact: string;
+            /** Id */
+            id: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Product Id */
+            product_id: string;
+            /** Product Name */
+            product_name: string;
+        };
+        /**
+         * MarketPanel
+         * @description The complete opportunity panel for one run.
+         *
+         *     Scoped to the run's effective competitor list and approved pain points.
+         *     Every section lists its sources and says why data is missing when it is.
+         */
+        MarketPanel: {
+            /**
+             * @default {
+             *       "alerts": [],
+             *       "availability": null,
+             *       "items_matched": 0
+             *     }
+             */
+            changelog: components["schemas"]["ChangelogSection"];
+            /**
+             * Combined Signals
+             * @default []
+             */
+            combined_signals: components["schemas"]["CombinedSignal"][];
+            /**
+             * Differentiation
+             * @default []
+             */
+            differentiation: components["schemas"]["DifferentiationOpportunity"][];
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Incumbent Id
+             * @default null
+             */
+            incumbent_id: string | null;
+            /**
+             * Market Gaps
+             * @default []
+             */
+            market_gaps: components["schemas"]["MarketGapWithEvidence"][];
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "new_idea" | "alternative" | "new_feature";
+            /**
+             * @default {
+             *       "alerts": [],
+             *       "availability": null,
+             *       "snapshots": [],
+             *       "tracked_pages": []
+             *     }
+             */
+            pricing: components["schemas"]["PricingSection"];
+            /** Run Id */
+            run_id: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * @default {
+             *       "availability": null,
+             *       "rows": [],
+             *       "total_reviews": 0
+             *     }
+             */
+            switching: components["schemas"]["SwitchingSection"];
+            /**
+             * @default {
+             *       "availability": null,
+             *       "scores": []
+             *     }
+             */
+            traction: components["schemas"]["TractionSection"];
         };
         /** Missing */
         Missing: {
@@ -721,26 +978,59 @@ export interface components {
              * @default false
              */
             billed_annually: boolean;
-            /** Currency */
-            currency?: string | null;
+            /**
+             * Currency
+             * @default null
+             */
+            currency: string | null;
             kind: components["schemas"]["ChangeKind"];
-            /** New Amount */
-            new_amount?: string | null;
+            /**
+             * New Amount
+             * @default null
+             */
+            new_amount: number | string | null;
             /**
              * New Limits
              * @default []
              */
             new_limits: string[];
-            /** Old Amount */
-            old_amount?: string | null;
+            /**
+             * Old Amount
+             * @default null
+             */
+            old_amount: number | string | null;
             /**
              * Old Limits
              * @default []
              */
             old_limits: string[];
-            period?: components["schemas"]["BillingPeriod"] | null;
+            /** @default null */
+            period: components["schemas"]["BillingPeriod"] | null;
             /** Plan */
             plan: string;
+        };
+        /**
+         * PricingSection
+         * @description Current pricing and its history for the run's products.
+         */
+        PricingSection: {
+            /**
+             * Alerts
+             * @default []
+             */
+            alerts: components["schemas"]["PricingAlert"][];
+            /** @default null */
+            availability: components["schemas"]["Availability"] | null;
+            /**
+             * Snapshots
+             * @default []
+             */
+            snapshots: components["schemas"]["PricingSnapshot"][];
+            /**
+             * Tracked Pages
+             * @default []
+             */
+            tracked_pages: components["schemas"]["TrackedPage"][];
         };
         /** PricingSnapshot */
         PricingSnapshot: {
@@ -1098,6 +1388,24 @@ export interface components {
             /** To Product */
             to_product: string | null;
         };
+        /**
+         * SwitchingSection
+         * @description Switching reviews and the from/to table, scoped to the run's products.
+         */
+        SwitchingSection: {
+            /** @default null */
+            availability: components["schemas"]["Availability"] | null;
+            /**
+             * Rows
+             * @default []
+             */
+            rows: components["schemas"]["SwitchingRow"][];
+            /**
+             * Total Reviews
+             * @default 0
+             */
+            total_reviews: number;
+        };
         /** Task */
         Task: {
             /**
@@ -1133,6 +1441,18 @@ export interface components {
              */
             schema_version: 1;
         };
+        /**
+         * TrackedPage
+         * @description A pricing page that is read again every week: any page snapshotted once.
+         */
+        TrackedPage: {
+            /** Product Id */
+            product_id: string;
+            /** Product Name */
+            product_name: string;
+            /** Url */
+            url: string;
+        };
         /** TractionScore */
         TractionScore: {
             /** Confidence */
@@ -1154,6 +1474,19 @@ export interface components {
             schema_version: 1;
             /** Sources */
             sources: string[];
+        };
+        /**
+         * TractionSection
+         * @description Traction for the run's products.
+         */
+        TractionSection: {
+            /** @default null */
+            availability: components["schemas"]["Availability"] | null;
+            /**
+             * Scores
+             * @default []
+             */
+            scores: components["schemas"]["TractionScore"][];
         };
         /**
          * Trend
@@ -1345,7 +1678,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1394,7 +1727,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1447,7 +1780,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1496,7 +1829,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1549,7 +1882,56 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_market_panel_runs__run_id__market_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketPanel"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1602,7 +1984,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1652,7 +2034,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;

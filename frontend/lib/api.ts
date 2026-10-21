@@ -64,4 +64,5 @@ export const api = {
     post<RunView>(`/runs/${runId}/resume`, { from_stage: fromStage ?? null }),
   exportJson: <T>(runId: string, name: ExportName) =>
     request<T>(`/runs/${runId}/exports/${name}?format=json`),
+  getMarketPanel: (runId: string) => request<unknown>(`/runs/${runId}/market`),
 };

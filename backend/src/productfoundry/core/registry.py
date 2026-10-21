@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from productfoundry.core.acceptance import AcceptanceCriteria
 from productfoundry.core.competitors import CompetitorList
+from productfoundry.core.market_panel import MarketPanel
 from productfoundry.core.pain_points import PainPointReport
 from productfoundry.core.prd import Prd
 from productfoundry.core.pricing import PricingSnapshot
@@ -26,5 +27,6 @@ SCHEMAS: dict[str, type[BaseModel]] = {
         AcceptanceCriteria,
         PricingSnapshot,
         TractionScore,
+        MarketPanel,
     )
 }

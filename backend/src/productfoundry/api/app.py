@@ -30,6 +30,7 @@ from productfoundry.core.errors import (
     RunNotFound,
     StageOutputInvalid,
 )
+from productfoundry.core.market_panel import MarketPanel
 from productfoundry.core.pricing import AlertStore, PricingAlert
 from productfoundry.core.registry import SCHEMAS
 from productfoundry.core.reviews import ReviewStore
@@ -249,5 +250,34 @@ def create_app(backend: Backend | None = None) -> FastAPI:
         if backend.pricing_alerts is None:
             return []
         return backend.pricing_alerts.list(product_id)
+
+    @app.get("/runs/{run_id}/market", response_model=MarketPanel, responses=ERRORS)
+    def get_market_panel(run_id: str, backend: Uses) -> MarketPanel:
+        """The market opportunity panel: pricing, traction, switching, changelog, gaps, and signals.
+
+        Returns partial data when some market intelligence has not been collected yet.
+        Makes no external requests or LLM calls.
+        """
+        run = backend.store.get(run_id)
+        # Check if we have the minimum required stages completed
+        required_stages = {"s1_competitors", "s3_pain_points", "s4_prd"}
+        completed = {r.key for r in run.stages if r.has_output}
+        if not required_stages.issubset(completed):
+            raise ProductFoundryError(
+                f"run {run_id} has not completed the required stages for the market panel "
+                f"(need: {', '.join(required_stages - completed)})"
+            )
+
+        # Need database for market data
+        from productfoundry import storage
+        from productfoundry.runtime import market_panel
+
+        engine = storage.make_engine()
+        storage.check_ready(engine)
+        sessions = storage.make_sessions(engine)
+        try:
+            return market_panel(sessions, run)
+        finally:
+            engine.dispose()
 
     return app

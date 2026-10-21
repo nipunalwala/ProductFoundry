@@ -25,15 +25,101 @@ from pathlib import Path
 from typing import Any
 
 from productfoundry.core.acceptance import AcceptanceCriteria
+from productfoundry.core.changelog import ChangelogAlert
 from productfoundry.core.clusters import Cluster
 from productfoundry.core.competitors import CompetitorList
 from productfoundry.core.pain_points import PainPointReport
-from productfoundry.core.prd import Prd, market_gaps
+from productfoundry.core.prd import MarketGap, Prd, market_gaps
 from productfoundry.core.tasks import TaskPlan
 
 HERE = Path(__file__).parent
 RESULTS = HERE / "results"
 RATINGS = HERE / "ratings"
+
+
+def _collect_all_gaps(
+    competitors: CompetitorList,
+    report: PainPointReport,
+    pricing_alerts: list,
+    changelog_alerts: list[ChangelogAlert],
+) -> dict[str, MarketGap]:
+    """Collect all possible market gaps for validation.
+
+    Mirrors the logic in the PRD stage and market panel.
+    """
+    gaps = {}
+
+    # 1. Competitor-fact gaps (existing)
+    for gap in market_gaps(competitors):
+        gaps[gap.id] = gap
+
+    # 2. Pricing gaps from alerts
+    for alert in pricing_alerts:
+        for change in alert.changes:
+            if change.kind in ("price_increased", "plan_removed", "limits_changed"):
+                gap_id = (
+                    f"gap_pricing_{alert.product_id}_{change.kind}_{change.plan}_"
+                    f"{alert.detected_at.strftime('%Y%m%d')}"
+                )
+                fact_parts = [f"{change.plan}:"]
+                if change.kind == "price_increased":
+                    fact_parts.append(
+                        f"price rose from {change.old_amount} to {change.new_amount} "
+                        f"{change.currency}/{change.period}"
+                    )
+                elif change.kind == "plan_removed":
+                    fact_parts.append("plan was removed")
+                else:
+                    fact_parts.append(
+                        f"limits changed from [{'; '.join(change.old_limits)}] "
+                        f"to [{'; '.join(change.new_limits)}]"
+                    )
+                gaps[gap_id] = MarketGap(
+                    id=gap_id,
+                    product_id=alert.product_id,
+                    product_name=alert.product_name,
+                    fact=" ".join(fact_parts),
+                )
+
+    # 3. Switching gaps from pain point report
+    for row in report.switching_table:
+        if row.from_product and row.to_product:
+            gap_id = f"gap_switching_{row.from_product}_{row.to_product}_{row.count}"
+            gaps[gap_id] = MarketGap(
+                id=gap_id,
+                product_id=row.from_product,
+                product_name=row.from_product,
+                fact=f"Users switching from {row.from_product} to {row.to_product}: "
+                f"{row.count} reviews cite {', '.join(row.reasons[:3])}",
+            )
+
+    # 4. Changelog gaps from alerts
+    for alert in changelog_alerts:
+        if alert.kind == "shipped_fix":
+            for cluster_id in alert.cluster_ids:
+                gap_id = f"gap_changelog_{alert.item.id}_{cluster_id}"
+                gaps[gap_id] = MarketGap(
+                    id=gap_id,
+                    product_id=alert.item.product_id,
+                    product_name=alert.product_name,
+                    fact=(
+                        f"Shipped a fix for '{alert.pain_point_labels[0]}' "
+                        f"in {alert.item.title} ({alert.item.version or 'undated'})"
+                    ),
+                )
+        elif alert.kind == "unplanned_feature":
+            gap_id = f"gap_changelog_{alert.item.id}_unplanned"
+            gaps[gap_id] = MarketGap(
+                id=gap_id,
+                product_id=alert.item.product_id,
+                product_name=alert.product_name,
+                fact=(
+                    f"Shipped unplanned feature: {alert.item.title} "
+                    f"({alert.item.version or 'undated'}) — {alert.reason}"
+                ),
+            )
+
+    return gaps
 
 
 def walk(
@@ -42,6 +128,8 @@ def walk(
     competitors: CompetitorList,
     clusters: Sequence[Cluster],
     review_ids: Collection[str],
+    pricing_alerts: list = None,
+    changelog_alerts: list[ChangelogAlert] = None,
 ) -> dict[str, Any]:
     """Follow every citation of the PRD down to stored reviews and list what breaks.
 
@@ -50,8 +138,13 @@ def walk(
     step on the way down that does not resolve, whether or not the requirement
     has other evidence.
     """
+    if pricing_alerts is None:
+        pricing_alerts = []
+    if changelog_alerts is None:
+        changelog_alerts = []
+
     points = {point.cluster_id: point for point in report.pain_points}
-    gaps = {gap.id for gap in market_gaps(competitors)}
+    gaps = _collect_all_gaps(competitors, report, pricing_alerts, changelog_alerts)
     saved = {cluster.id: cluster for cluster in clusters}
     broken: list[dict[str, str]] = []
 
@@ -90,7 +183,7 @@ def walk(
                         {
                             "requirement": requirement.id,
                             "evidence": evidence,
-                            "problem": "market gap is not a competitor fact of this run",
+                            "problem": "market gap is not a valid gap of this run",
                         }
                     )
                 continue
@@ -216,15 +309,44 @@ def _write(folder: Path, slug: str, data: Any) -> Path:
 
 
 def _grounding(slug: str, run_id: str) -> int:
+    from productfoundry import storage
+    from productfoundry.market.changelog import run_alerts
+
     run, outputs, clusters, review_ids = _load(
         run_id, ["s1_competitors", "s3_pain_points", "s4_prd"]
     )
+
+    # Load pricing alerts for the run's products
+    product_ids = [c.id for c in outputs["s1_competitors"].competitors]
+    pricing_alerts_list = []
+    with storage.make_sessions(storage.make_engine()) as sessions:
+        pricing_alerts_repo = storage.PricingAlertRepository(sessions)
+        for product_id in product_ids:
+            pricing_alerts_list.extend(pricing_alerts_repo.list(product_id))
+
+    # Load changelog alerts
+    changelog_alerts_list = []
+    changelog_repo = storage.ChangelogRepository(storage.make_sessions(storage.make_engine()))
+    try:
+        alerts_result = run_alerts(
+            run_id=run_id,
+            competitors=outputs["s1_competitors"],
+            report=outputs["s3_pain_points"],
+            prd=outputs["s4_prd"],
+            store=changelog_repo,
+        )
+        changelog_alerts_list = alerts_result.alerts
+    except Exception:
+        pass  # Matching may not have been done yet
+
     result = walk(
         outputs["s4_prd"],
         outputs["s3_pain_points"],
         outputs["s1_competitors"],
         clusters,
         review_ids,
+        pricing_alerts=pricing_alerts_list,
+        changelog_alerts=changelog_alerts_list,
     )
     name = run.input.incumbent.name if run.input.incumbent else slug
     print(_write(RESULTS, slug, {"product": name, "run_id": run_id} | result))

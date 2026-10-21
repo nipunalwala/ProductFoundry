@@ -48,6 +48,7 @@ def live_gateway(sessions, settings):
 
 
 def services(sessions) -> Services:
+    from productfoundry import storage
     from productfoundry.ml.config import load_config
     from productfoundry.ml.embeddings import SentenceTransformerEmbedder
     from productfoundry.settings import Settings
@@ -75,6 +76,10 @@ def services(sessions) -> Services:
         reviews=reviews,
         clusters=clusters,
         embedder=SentenceTransformerEmbedder(load_config().embeddings),
+        pricing=storage.PricingRepository(sessions),
+        pricing_alerts=storage.PricingAlertRepository(sessions),
+        traction=storage.TractionRepository(sessions),
+        changelog=storage.ChangelogRepository(sessions),
     )
 
 
@@ -396,4 +401,38 @@ def traction_score(sessions, product_id: str):
         product_id,
         store=storage.TractionRepository(sessions),
         reviews=storage.ReviewRepository(sessions),
+    )
+
+
+def market_panel(sessions, run: "RunRecord"):
+    """Build the market opportunity panel for a run.
+
+    Reads from all market stores; makes no external requests.
+    """
+    from productfoundry import storage
+    from productfoundry.core.competitors import CompetitorList
+    from productfoundry.core.pain_points import PainPointReport
+    from productfoundry.core.prd import Prd
+    from productfoundry.market.market_panel import assemble_full_market_panel
+
+    competitors = CompetitorList.model_validate(
+        stage_output(run, "s1_competitors", "competitor list")
+    )
+    report = PainPointReport.model_validate(
+        stage_output(run, "s3_pain_points", "pain-point report")
+    )
+    prd = Prd.model_validate(stage_output(run, "s4_prd", "PRD"))
+
+    return assemble_full_market_panel(
+        run_id=run.id,
+        run_mode=run.input.mode.value,
+        incumbent_id=run.input.incumbent.id if run.input.incumbent else None,
+        competitors=competitors,
+        report=report,
+        prd=prd,
+        pricing_store=storage.PricingRepository(sessions),
+        pricing_alerts=storage.PricingAlertRepository(sessions),
+        traction_store=storage.TractionRepository(sessions),
+        changelog_store=storage.ChangelogRepository(sessions),
+        reviews_store=storage.ReviewRepository(sessions),
     )

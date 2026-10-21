@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { CompetitorCheckpoint } from "@/components/CompetitorCheckpoint";
+import { MarketPanelView } from "@/components/MarketPanel";
 import { PainPointCheckpoint } from "@/components/PainPointCheckpoint";
 import { PrdView } from "@/components/PrdView";
 import { StageProgress } from "@/components/StageProgress";
@@ -87,6 +88,7 @@ export default function RunPage() {
   if (!run) return <p>Loading…</p>;
 
   const done = (key: string) => run.stages.some((s) => s.key === key && s.has_output);
+  const marketPanelReady = done("s1_competitors") && done("s3_pain_points") && done("s4_prd");
   return (
     <>
       <h1>{run.idea}</h1>
@@ -111,6 +113,14 @@ export default function RunPage() {
           </span>
         ))}
       </section>
+
+      {marketPanelReady && (
+        <MarketPanelView
+          runId={run.id}
+          mode={run.input.mode}
+          incumbentName={run.input.incumbent?.name}
+        />
+      )}
 
       {tasks ? <TaskList tasks={tasks} /> : null}
       {prd ? <PrdView prd={prd} /> : null}

@@ -4,9 +4,12 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
+from productfoundry.core.changelog import ChangelogStore
 from productfoundry.core.clusters import ClusterStore
+from productfoundry.core.pricing import AlertStore, PricingStore
 from productfoundry.core.reviews import ReviewStore
 from productfoundry.core.run_input import RunInput
+from productfoundry.core.traction import TractionStore
 from productfoundry.llm.types import Completer
 from productfoundry.ml.embeddings import Embedder
 from productfoundry.orchestrator.state import RunRecord
@@ -27,6 +30,11 @@ class Services:
     reviews: ReviewStore | None = None
     clusters: ClusterStore | None = None
     embedder: Embedder | None = None
+    # Market intelligence stores (for the market panel)
+    pricing: PricingStore | None = None
+    pricing_alerts: AlertStore | None = None
+    traction: TractionStore | None = None
+    changelog: ChangelogStore | None = None
 
     def for_run(self, run_id: str, seed: int) -> "Services":
         """The services one run's stages get: its id and seed, and LLM calls recorded against it."""

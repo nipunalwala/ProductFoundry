@@ -172,7 +172,7 @@ def test_the_grounding_check_rejects_evidence_that_is_not_in_the_run(stage_3, ru
     forged = prd.market_gaps[0].model_copy(update={"fact": "It has no free plan."})
     changed = prd.model_copy(update={"market_gaps": [forged]})
     assert (
-        "is not a competitor fact of this run"
+        "is not a valid gap of this run"
         in grounding_problems(changed, report, COMPETITORS)[0]
     )
     with pytest.raises(StageOutputInvalid, match="the PRD is not grounded"):
